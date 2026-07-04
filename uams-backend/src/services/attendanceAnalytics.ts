@@ -96,7 +96,7 @@ export const getDashboardStats = async () => {
   const totalCourses = await CourseEnrollment.distinct("courseId");
   const totalEnrollments = await CourseEnrollment.countDocuments();
   const totalLecturers = await Lecturer.countDocuments();
-  const academicSession = await AcademicSession.findOne();
+  const academicSession = await AcademicSession.findOne({ isActive: true });
   const academicSessionName = academicSession?.sessionName;
 
   // Get start and end of today

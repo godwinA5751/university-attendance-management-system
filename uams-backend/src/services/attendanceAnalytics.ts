@@ -2,6 +2,8 @@ import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
 import { Course } from "../models/Course.js";
 import { Lecturer } from "../models/Lecturer.js";
+import { Student } from "../models/Student.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 
 export const getStudentAttendanceStats = async (
   studentId: string
@@ -90,23 +92,39 @@ export const getCourseAttendanceStats = async (courseId: string) => {
 };
 
 export const getDashboardStats = async () => {
-  const totalStudents = await CourseEnrollment.distinct("studentId");
+  const totalStudents = await Student.countDocuments();
   const totalCourses = await CourseEnrollment.distinct("courseId");
-  const totalAttendance = await Attendance.countDocuments();
+  const totalEnrollments = await CourseEnrollment.countDocuments();
+  const totalLecturers = await Lecturer.countDocuments();
+  const academicSession = await AcademicSession.findOne();
+  const academicSessionName = academicSession?.sessionName;
 
+  // Get start and end of today
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Filter attendance to today only
+  const todayFilter = { date: { $gte: startOfDay, $lte: endOfDay } }; // replace "date" with your actual field name
+
+  const totalAttendance = await Attendance.countDocuments(todayFilter);
   const present = await Attendance.countDocuments({
+    ...todayFilter,
     status: "present",
   });
 
   const attendanceRate =
-    totalAttendance === 0
-      ? 0
-      : (present / totalAttendance) * 100;
+    totalAttendance === 0 ? 0 : (present / totalAttendance) * 100;
 
   return {
+    academicSession: academicSessionName,
     totalStudents,
     totalCourses: totalCourses.length,
-    totalAttendance: totalAttendance,
+    totalEnrollments,
+    totalLecturers,
+    totalAttendance,
     attendanceRate: Number(attendanceRate.toFixed(2)),
   };
 };

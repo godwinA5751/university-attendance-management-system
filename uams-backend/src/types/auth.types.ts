@@ -1,5 +1,4 @@
 export interface LoginInput {
-  role: "student" | "lecturer" | "admin";
   identifier: string;
   password: string;
 }

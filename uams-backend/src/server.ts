@@ -1,11 +1,12 @@
+import dns from "node:dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 import dotenv from "dotenv";
-dotenv.config();
-
 import app from "./app.js";
 import { connectDB } from "./config/db.js";
 import { seedAdmin } from "./utils/seedAdmin.js";
 
 const PORT = process.env.PORT || 8000;
+dotenv.config();
 
 const startServer = async () => {
   try {

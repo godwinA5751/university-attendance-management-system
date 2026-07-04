@@ -2,136 +2,66 @@ import type { LoginInput, ChangePasswordInput } from "../types/auth.types.js";
 import { User } from "../models/User.js";
 import { Student } from "../models/Student.js";
 import { Lecturer } from "../models/Lecturer.js";
-import jwt from "jsonwebtoken";
+import { buildLoginResponse } from "../utils/loginResponse.js";
 
-export const login = async (data: LoginInput) => {
-  const { role, identifier, password } = data;
 
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not configured");
+export const login = async ({ identifier, password }: LoginInput) => {
+  
+  let user = await User.findOne({
+    email: identifier,
+    role: "admin",
+  }).select("+password");
+  
+  if (user) {
+    if (!user.isActive) throw new Error("Account is inactive");
+  
+    const isMatch = await user.comparePassword(password);
+  
+    if (!isMatch) throw new Error("Invalid credentials");
+  
+    return buildLoginResponse(user);
   }
 
-  if (role === "student") {
-    // student login
-    const student = await Student.findOne({ matricNumber: identifier }).populate({
-      path: "userId",
-      select: "+password",
-    });
-    if (!student) {
-      throw new Error("Invalid credentials");
-    }
-
-    const user = student.userId as any;
-
-    if (!user.isActive) {
-      throw new Error("Account is inactive");
-    }
-
-    const isMatch = await user.comparePassword(password);
-    
-    if (!isMatch) {
-      throw new Error("Invalid credentials");
-    }
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1d" }
-    );
-
-    return {
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        mustChangePassword: user.mustChangePassword,
-      },
-    };
-  } else if (role === "lecturer") {
-    // lecturer login
-    const lecturer = await Lecturer.findOne({
-      staffNumber: identifier,
-    }).populate({
-      path: "userId",
-      select: "+password",
-    });
-    if (!lecturer) {
-      throw new Error("Invalid credentials");
-    }
-    
+  const lecturer = await Lecturer.findOne({
+    staffNumber: identifier,
+  }).populate({
+    path: "userId",
+    select: "+password",
+  });
+  
+  if (lecturer) {
     const user = lecturer.userId as any;
-
-    if (!user.isActive) {
-      throw new Error("Account is inactive");
-    }
-
+  
+    if (!user.isActive) throw new Error("Account is inactive");
+  
     const isMatch = await user.comparePassword(password);
-    
-    if (!isMatch) {
-      throw new Error("Invalid credentials");
-    }
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1d" }
-    );
-
-    return {
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        mustChangePassword: user.mustChangePassword,
-      },
-    };
-  } else if (role === "admin") {
-    // admin login
-    const user = await User.findOne({
-      email: identifier
-    }).select("+password");;
-    if (!user || user.role !== "admin") {
-      throw new Error("Invalid credentials");
-    }
-
-    const isMatch = await user.comparePassword(password);
-    
-    if (!isMatch) {
-      throw new Error("Invalid credentials");
-    }
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1d" }
-    );
-
-    return {
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        mustChangePassword: user.mustChangePassword,
-      },
-    };
-  } else {
-    throw new Error("Invalid role");
+  
+    if (!isMatch) throw new Error("Invalid credentials");
+  
+    return buildLoginResponse(user);
   }
+
+  const student = await Student.findOne({
+    matricNumber: identifier,
+  }).populate({
+    path: "userId",
+    select: "+password",
+  });
+  
+  if (student) {
+    const user = student.userId as any;
+  
+    if (!user.isActive) throw new Error("Account is inactive");
+  
+    const isMatch = await user.comparePassword(password);
+  
+    if (!isMatch) throw new Error("Invalid credentials");
+  
+    return buildLoginResponse(user);
+  }
+
+  throw new Error("Invalid credentials");
+  
 }
 
 export const changePassword = async (

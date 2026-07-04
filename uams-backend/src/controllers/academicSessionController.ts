@@ -1,5 +1,22 @@
-import type { Request, Response } from "express";
-import { createAcademicSession, activateAcademicSession } from "../services/academicSessionService.js";
+import type { Request, Response, NextFunction } from "express";
+import { createAcademicSession, activateAcademicSession, getAcademicSessions, deleteAcademicSession } from "../services/academicSessionService.js";
+
+export const getAcademicSessionsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const sessions = await getAcademicSessions();
+
+    res.status(200).json({
+      message: "Academic sessions fetched successfully",
+      data: sessions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const createAcademicSessionController = async (
   req: Request,
@@ -34,6 +51,22 @@ export const createAcademicSessionController = async (
     return res.status(500).json({
       message: "Internal server error",
     });
+  }
+};
+
+export const deleteAcademicSessionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await deleteAcademicSession(req.params.id as string);
+
+    res.status(200).json({
+      message: "Academic session deleted successfully",
+    });
+  } catch (error) {
+    next(error);
   }
 };
 

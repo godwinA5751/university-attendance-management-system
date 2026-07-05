@@ -1,7 +1,9 @@
 "use client";
 
-import { AcademicSession } from "@/types/academicSession";
 import { formatDate } from "@/utils/formatDate";
+import { AcademicSession } from "@/types/academicSession";
+import { Badge, Button, Card } from "@/components/ui";
+import { Trash2, RefreshCcw } from "lucide-react";
 
 interface AcademicSessionCardProps {
   session: AcademicSession;
@@ -14,50 +16,63 @@ export default function AcademicSessionCard({
   onActivate,
   onDelete,
 }: AcademicSessionCardProps) {
+
   return (
-    <div className="border rounded-xl p-5 shadow-sm bg-white flex justify-between items-center">
-      <div>
+    <Card className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="space-y-2">
         <h2 className="text-lg font-semibold">
           {session.sessionName}
         </h2>
 
-        <p className="text-sm text-gray-600">
-          Start: {formatDate(session.startDate)}
-        </p>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p>
+            <span className="font-medium">Start:</span>{" "}
+            {formatDate(session.startDate)}
+          </p>
 
-        <p className="text-sm text-gray-600">
-          End: {formatDate(session.endDate)}
-        </p>
+          <p>
+            <span className="font-medium">End:</span>{" "}
+            {formatDate(session.endDate)}
+          </p>
+        </div>
 
-        <span
-          className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${
+        <Badge
+          variant={
             session.isActive
-              ? "bg-green-100 text-green-700"
-              : "bg-gray-200 text-gray-700"
-          }`}
+              ? "success"
+              : "secondary"
+          }
         >
           {session.isActive ? "Active" : "Inactive"}
-        </span>
+        </Badge>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         {!session.isActive && (
-          <button
+          <Button
+            variant="success"
+            title="Activate academic session"
+            leftIcon={<RefreshCcw size={16} />}
             onClick={() => onActivate(session._id)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Activate
-          </button>
+          </Button>
         )}
 
-        <button
-          onClick={() => onDelete(session._id)}
-          disabled={session.isActive}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        <Button
+            variant="danger"
+            leftIcon={<Trash2 size={16} />}
+            disabled={session.isActive}
+            title={
+                session.isActive
+                    ? "Deactivate this session before deleting it."
+                    : "Delete academic session"
+            }
+            onClick={() => onDelete(session._id)}
         >
-          Delete
-        </button>
+            Delete
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }

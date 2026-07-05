@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Input } from "@/components/ui";
 import { CreateAcademicSessionInput } from "@/types/academicSession";
+import { Plus } from "lucide-react";
 
 interface AcademicSessionFormProps {
   loading: boolean;
@@ -18,15 +20,70 @@ export default function AcademicSessionForm({
     endDate: "",
   });
 
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({
+    sessionName: "",
+    startDate: "",
+    endDate: "",
+  });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [e.target.name]: "",
+    }));
+  };
+
+  const validate = () => {
+    const newErrors = {
+      sessionName: "",
+      startDate: "",
+      endDate: "",
+    };
+
+    let valid = true;
+
+    if (!formData.sessionName.trim()) {
+      newErrors.sessionName =
+        "Academic session name is required.";
+      valid = false;
+    }
+
+    if (!formData.startDate) {
+      newErrors.startDate =
+        "Start date is required.";
+      valid = false;
+    }
+
+    if (!formData.endDate) {
+      newErrors.endDate =
+        "End date is required.";
+      valid = false;
+    }
+
+    if (
+      formData.startDate &&
+      formData.endDate
+    ) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+
+      if (end <= start) {
+        newErrors.endDate =
+          "End date must be after the start date.";
+        valid = false;
+      }
+    }
+
+    setErrors(newErrors);
+
+    return valid;
   };
 
   const handleSubmit = (
@@ -34,26 +91,7 @@ export default function AcademicSessionForm({
   ) => {
     e.preventDefault();
 
-    if (
-      !formData.sessionName.trim() ||
-      !formData.startDate ||
-      !formData.endDate
-    ) {
-      setError("Please fill all fields.");
-      return;
-    }
-
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-
-    if (end <= start) {
-      setError(
-        "End date cannot be earlier than the start date."
-      );
-      return;
-    }
-
-    setError("");
+    if (!validate()) return;
 
     onSubmit(formData);
   };
@@ -61,46 +99,47 @@ export default function AcademicSessionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4"
+      className="space-y-5"
     >
-      <input
-        type="text"
-        name="sessionName"
-        placeholder="Academic Session"
+      <Input
+        label="Academic Session"
+        name="sessionName"  
+        required
+        placeholder="2025/2026"
         value={formData.sessionName}
         onChange={handleChange}
-        className="w-full border rounded-lg px-4 py-2"
+        error={errors.sessionName}
       />
 
-      <input
+      <Input
+        label="Start Date"
         type="date"
         name="startDate"
+        required
         value={formData.startDate}
         onChange={handleChange}
-        className="w-full border rounded-lg px-4 py-2"
+        error={errors.startDate}
       />
 
-      <input
+      <Input
+        label="End Date"
         type="date"
         name="endDate"
+        required
         value={formData.endDate}
         onChange={handleChange}
-        className="w-full border rounded-lg px-4 py-2"
+        error={errors.endDate}
       />
 
-      {error && (
-        <p className="text-red-500 text-sm">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? "Creating..." : "Create Session"}
-      </button>
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          loading={loading}
+          leftIcon={<Plus size={18} />}
+        >
+          Create Session
+        </Button>
+      </div>
     </form>
   );
 }

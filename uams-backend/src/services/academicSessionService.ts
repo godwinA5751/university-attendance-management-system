@@ -4,7 +4,7 @@ import type { CreateAcademicSessionInput } from "../types/academicSession.types.
 
 export const getAcademicSessions = async () => {
   return await AcademicSession.find()
-    .sort({ createdAt: -1 });
+    .sort({ isActive: -1, createdAt: -1 });
 };
 
 export const createAcademicSession = async (

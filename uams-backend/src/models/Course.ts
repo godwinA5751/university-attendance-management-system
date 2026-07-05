@@ -5,7 +5,6 @@ const courseSchema = new mongoose.Schema(
     courseCode: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
     },
@@ -32,19 +31,25 @@ const courseSchema = new mongoose.Schema(
       enum: [100, 200, 300, 400, 500, 600],
       required: true,
     },
-
-    lecturerIds: {
-      type: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Lecturer",
-        },
-      ],
-      default: [],
+    
+    academicSessionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicSession",
+      required: true,
     },
   },
   {
     timestamps: true,
+  }
+);
+
+courseSchema.index(
+  {
+    courseCode: 1,
+    academicSessionId: 1,
+  },
+  {
+    unique: true,
   }
 );
 

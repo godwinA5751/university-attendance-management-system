@@ -9,6 +9,7 @@ import academicSessionRoutes from "./routes/academicSessionRoutes.js";
 import enrollmentRoutes from "./routes/courseEnrollmentRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import courseAssignmentRoutes from "./routes/courseAssignmentRoutes.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/academic-sessions", academicSessionRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/course-assignment", courseAssignmentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 

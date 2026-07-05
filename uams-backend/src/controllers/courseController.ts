@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
-import { createCourse, assignLecturersToCourse, replaceLecturersForCourse, removeLecturerFromCourse, getCourseWithLecturers, getAllCoursesWithLecturers } from "../services/courseService.js";
+import { createCourse, getCourse, getAllCourses, updateCourse, deleteCourse } from "../services/courseService.js";
 import { getAttendanceByCourse } from "../services/attendanceService.js";
+import { getLecturersGroupedByCourse, getLecturersForCourse } from "../services/courseAssignmentService.js";
 
 export const getCourseAttendanceController = async (
   req: Request,
@@ -27,11 +28,20 @@ export const getAllCoursesController = async (
   res: Response
 ) => {
   try {
-    const courses = await getAllCoursesWithLecturers();
-
-    return res.status(200).json({
+    const courses = await getAllCourses();
+    
+    const lecturersGrouped =
+      await getLecturersGroupedByCourse();
+    
+    const data = courses.map((course) => ({
+      ...course.toObject(),
+      lecturers:
+        lecturersGrouped[course._id.toString()] ?? [],
+    }));
+    
+    res.status(200).json({
       message: "Courses fetched successfully",
-      data: courses,
+      data,
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -51,13 +61,18 @@ export const getCourseController = async (
   res: Response
 ) => {
   try {
-    const courseId = req.params.id as string;
-
-    const course = await getCourseWithLecturers(courseId);
-
-    return res.status(200).json({
+    const course = await getCourse(req.params.id as string);
+    
+    const lecturers = await getLecturersForCourse(
+      req.params.id as string
+    );
+    
+    res.status(200).json({
       message: "Course fetched successfully",
-      data: course,
+      data: {
+        ...course.toObject(),
+        lecturers,
+      },
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -107,139 +122,69 @@ export const createCourseController = async (req: Request, res: Response) => {
   }
 };
 
-export const assignLecturersController = async (
+export const updateCourseController = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const courseId = req.params.id as string;
-    const lecturerIds: string[] = req.body.lecturerIds;
-    if (!courseId) {
-      return res.status(400).json({ message: "Course ID is required" });
-    }
-    
-    if (!Array.isArray(lecturerIds)) {
-      return res.status(400).json({ message: "lecturerIds must be an array" });
-    }
-
-    const uniqueLecturerIds = [...new Set(lecturerIds)];
-    
-    const course = await assignLecturersToCourse({
-      courseId,
-      lecturerIds: uniqueLecturerIds,
+    const course = await updateCourse({
+      courseId: req.params.id,
+      ...req.body,
     });
 
-    return res.status(200).json({
-      message: "Lecturers assigned successfully",
+    res.status(200).json({
+      message: "Course updated successfully",
       data: course,
     });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Course not found") {
-        return res.status(404).json({ message: error.message });
+        return res.status(404).json({
+          message: error.message,
+        });
       }
 
-      if (error.message === "One or more lecturers not found") {
-        return res.status(400).json({ message: error.message });
+      if (error.message === "Academic session not found") {
+        return res.status(404).json({
+          message: error.message,
+        });
       }
 
-      return res.status(500).json({ message: error.message });
-    }
+      if (error.message === "Course already exists for this academic session") {
+        return res.status(409).json({
+          message: error.message,
+        });
+      }
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-};
-
-export const replaceLecturersController = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const courseId = req.params.id as string;
-    const lecturerIds = req.body.lecturerIds;
-
-    if (!courseId) {
-      return res.status(400).json({ message: "Course ID is required" });
-    }
-
-    if (!Array.isArray(lecturerIds)) {
-      return res.status(400).json({
-        message: "lecturerIds must be an array",
+      return res.status(500).json({
+        message: error.message,
       });
     }
-
-    const uniqueLecturerIds = [...new Set(lecturerIds)];
-
-    const course = await replaceLecturersForCourse({
-      courseId,
-      lecturerIds: uniqueLecturerIds,
-    });
-
-    return res.status(200).json({
-      message: "Lecturers replaced successfully",
-      data: course,
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "Course not found") {
-        return res.status(404).json({ message: error.message });
-      }
-
-      if (error.message === "One or more lecturers not found") {
-        return res.status(400).json({ message: error.message });
-      }
-
-      return res.status(500).json({ message: error.message });
-    }
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
   }
 };
 
-export const removeLecturerController = async (
+export const deleteCourseController = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const courseId = req.params.id as string;
-    const lecturerId = req.params.lecturerId as string;
+    await deleteCourse(req.params.id as string);
 
-    if (!courseId || !lecturerId) {
-      return res.status(400).json({
-        message: "Course ID and Lecturer ID are required",
-      });
-    }
-
-    const course = await removeLecturerFromCourse(
-      courseId,
-      lecturerId
-    );
-
-    return res.status(200).json({
-      message: "Lecturer removed successfully",
-      data: course,
+    res.status(200).json({
+      message: "Course deleted successfully",
     });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "Course not found") {
-        return res.status(404).json({ message: error.message });
+        return res.status(404).json({
+          message: error.message,
+        });
       }
 
-      if (
-        error.message === "Lecturer not assigned to this course"
-      ) {
-        return res.status(400).json({ message: error.message });
-      }
-
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({
+        message: error.message,
+      });
     }
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
   }
 };
+                                                    

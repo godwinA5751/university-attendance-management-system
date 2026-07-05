@@ -9,7 +9,7 @@ export default function Skeleton({
     <div
       className={`
         animate-pulse
-        rounded-md
+        rounded-full
         bg-gray-200
         ${className}
       `}

@@ -19,12 +19,41 @@ import AcademicSessionCard from "@/components/academic-session/AcademicSessionCa
 import AcademicSessionForm from "@/components/academic-session/AcademicSessionForm";
 import AcademicSessionSkeleton from "@/components/academic-session/AcademicSessionSkeleton";
 
+import {
+  Button,
+  Modal,
+  PageHeader,
+  EmptyState,
+  ConfirmDialog,
+} from "@/components/ui";
+import { useNotification } from "@/context/NotificationContext";
+
+import { Plus } from "lucide-react";
+
 export default function AcademicSessionsPage() {
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [error, setError] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "activate" | "delete" | null
+  >(null);
+  const [selectedId, setSelectedId] = useState("");
+  const { notify } = useNotification();
+  const [sessionCount, setSessionCount] = useState(() => {
+    const cached = localStorage.getItem('academicSessionCount');
+    return cached ? parseInt(cached, 10) : 4; // fallback default
+  });
+  
+  useEffect(() => {
+    if (sessions.length > 0) {
+      setTimeout(() => {
+        setSessionCount(sessions.length);
+        localStorage.setItem('academicSessionCount', sessions.length.toString());
+      }, 0);
+    }
+  }, [sessions]);
 
   const fetchSessions = async () => {
     try {
@@ -35,12 +64,16 @@ export default function AcademicSessionsPage() {
       setSessions(data);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        setError(
+        notify(
+          "error",
           error.response?.data?.message ??
             "Failed to fetch academic sessions."
         );
       } else {
-        setError("Failed to fetch academic sessions.");
+        notify(
+          "error",
+          "Failed to fetch academic sessions."
+        );
       }
     } finally {
       setLoading(false);
@@ -60,18 +93,27 @@ export default function AcademicSessionsPage() {
       setCreating(true);
 
       await createAcademicSession(data);
-
+      
+      notify(
+        "success",
+        "Academic session created successfully."
+      );
+      
       setShowModal(false);
-
+      
       await fetchSessions();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(
+        notify(
+          "error",
           error.response?.data?.message ??
             "Failed to create session."
         );
       } else {
-        alert("Failed to create session.");
+        notify(
+          "error",
+          "Failed to create session."
+        );
       }
     } finally {
       setCreating(false);
@@ -79,47 +121,55 @@ export default function AcademicSessionsPage() {
   };
 
   const handleActivate = async (id: string) => {
-    const confirm = window.confirm(
-      "Activate this academic session?"
-    );
-
-    if (!confirm) return;
 
     try {
       await activateAcademicSession(id);
 
+      notify(
+        "success",
+        "Academic session activated successfully."
+      );
+      
       await fetchSessions();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(
+        notify(
+          "error",
           error.response?.data?.message ??
             "Activation failed."
         );
       } else {
-        alert("Activation failed.");
+        notify(
+          "error",
+          "Activation failed."
+        );
       }
     }
   };
 
   const handleDelete = async (id: string) => {
-    const confirm = window.confirm(
-      "Delete this academic session?"
-    );
-
-    if (!confirm) return;
 
     try {
       await deleteAcademicSession(id);
 
+      notify(
+        "success",
+        "Academic session deleted successfully."
+      );
+      
       await fetchSessions();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(
+        notify(
+          "error",
           error.response?.data?.message ??
             "Deletion failed."
         );
       } else {
-        alert("Deletion failed.");
+        notify(
+          "error",
+          "Deletion failed."
+        );
       }
     }
   };
@@ -127,77 +177,116 @@ export default function AcademicSessionsPage() {
   return (
     <main className="p-8">
 
-      <div className="flex justify-between items-center mb-6">
-
-        <h1 className="text-3xl font-bold">
-          Academic Sessions
-        </h1>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
-        >
-          New Session
-        </button>
-
-      </div>
-
-      {error && (
-        <p className="text-red-500 mb-4">
-          {error}
-        </p>
-      )}
+      <PageHeader
+        title="Academic Sessions"
+        subtitle="Manage academic sessions."
+      
+        action={
+          <Button
+              leftIcon={<Plus size={18} />}
+              onClick={() => setShowModal(true)}
+          >
+              New Session
+          </Button>
+        }
+      />
 
       {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <AcademicSessionSkeleton key={index} />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {Array.from({ length: sessionCount }).map((_, index) => (
+            <AcademicSessionSkeleton key={index} isActive={index === 0} />
           ))}
         </div>
       ) : (
-        <div className="space-y-4">
-
-          {sessions.map((session) => (
-            <AcademicSessionCard
-              key={session._id}
-              session={session}
-              onActivate={handleActivate}
-              onDelete={handleDelete}
-            />
-          ))}
-
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center">
-
-          <div className="bg-white rounded-xl p-6 w-125">
-
-            <div className="flex justify-between items-center mb-5">
-
-              <h2 className="text-xl font-semibold">
-                New Academic Session
-              </h2>
-
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-xl"
+        sessions.length === 0 ? (
+          <EmptyState
+            title="No Academic Sessions"
+            description="Create your first academic session."
+        
+            action={
+              <Button
+                  leftIcon={<Plus size={18} />}
+                  onClick={() => setShowModal(true)}
               >
-                ×
-              </button>
-
-            </div>
-
-            <AcademicSessionForm
-              loading={creating}
-              onSubmit={handleCreate}
-            />
-
+                  New Session
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {sessions.map((session) => (
+              <AcademicSessionCard
+                key={session._id}
+                session={session}
+                onActivate={() => {
+                  setSelectedId(session._id);
+                  setConfirmAction("activate");
+                  setConfirmOpen(true);
+                }}
+                onDelete={() => {
+                  setSelectedId(session._id);
+                  setConfirmAction("delete");
+                  setConfirmOpen(true);
+                }}
+              />
+            ))}
           </div>
-
-        </div>
+        )
       )}
+
+      <Modal
+        open={showModal}
+        title="New Academic Session"
+        description="Create a new academic session."
+        onClose={() => setShowModal(false)}
+      >
+        <AcademicSessionForm
+          loading={creating}
+          onSubmit={handleCreate}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={
+          confirmAction === "activate"
+            ? "Activate Academic Session"
+            : "Delete Academic Session"
+        }
+        description={
+          confirmAction === "activate"
+            ? "This will deactivate the current active academic session."
+            : "This action cannot be undone."
+        }
+        confirmText={
+          confirmAction === "activate"
+            ? "Activate"
+            : "Delete"
+        }
+        confirmVariant={
+          confirmAction === "activate"
+            ? "success"
+            : "danger"
+        }
+        onCancel={() => {
+          setConfirmOpen(false);
+          setSelectedId("");
+          setConfirmAction(null);
+        }}
+        onConfirm={async () => {
+          if (!selectedId || !confirmAction) return;
+      
+          if (confirmAction === "activate") {
+            await handleActivate(selectedId);
+          } else {
+            await handleDelete(selectedId);
+          }
+      
+          setConfirmOpen(false);
+          setSelectedId("");
+          setConfirmAction(null);
+        }}
+      />
 
     </main>
   );

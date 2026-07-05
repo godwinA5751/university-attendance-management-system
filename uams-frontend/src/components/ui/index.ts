@@ -5,6 +5,7 @@ export { default as ConfirmDialog } from "./ConfirmDialog";
 export { default as EmptyState } from "./EmptyState";
 export { default as Input } from "./Input";
 export { default as Modal } from "./Modal";
+export { default as Notification } from "./Notification";
 export { default as PageHeader } from "./PageHeader";
 export { default as Skeleton } from "./Skeleton";
 export { default as Spinner } from "./Spinner";

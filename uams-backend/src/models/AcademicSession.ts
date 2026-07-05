@@ -27,6 +27,7 @@ const academicSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: false,
+      index: true,
     },
   },
   {

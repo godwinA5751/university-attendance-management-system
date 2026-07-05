@@ -1,6 +1,10 @@
 import express from "express";
 import {
-  createCourseController, assignLecturersController, replaceLecturersController, removeLecturerController, getCourseController, getAllCoursesController
+  createCourseController,
+  getCourseController,
+  getAllCoursesController,
+  updateCourseController,
+  deleteCourseController,
 } from "../controllers/courseController.js";
 import { verifyJWT } from "../middleware/verifyJWT.js";
 import { authorize } from "../middleware/authorize.js";
@@ -14,7 +18,18 @@ router.get("/:id",
   verifyJWT,
   authorize(["admin", "lecturer"]), getCourseController);
 router.post("/", verifyJWT, authorize(["admin"]), createCourseController);
-router.put("/:id/lecturers", verifyJWT, authorize(["admin"]), replaceLecturersController);
-router.patch("/:id/lecturers", verifyJWT, authorize(["admin"]), assignLecturersController);
-router.delete("/:id/lecturers/:lecturerId", verifyJWT, authorize(["admin"]), removeLecturerController);
+router.patch(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  updateCourseController
+);
+
+router.delete(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  deleteCourseController
+);
+
 export default router;

@@ -1,16 +1,16 @@
-import mongoose from "mongoose";
-import type { CreateCourseInput, AssignLecturersInput, ReplaceLecturersInput } from "../types/course.types.js";
-import { Lecturer } from "../models/Lecturer.js";
+import type { CreateCourseInput, UpdateCourseInput } from "../types/course.types.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 import { Course } from "../models/Course.js";
+import { CourseAssignment } from "../models/CourseAssignment.js";
 
-export const getAllCoursesWithLecturers = async () => {
-  const courses = await Course.find().populate("lecturerIds");
+export const getAllCourses = async () => {
+  const courses = await Course.find().populate("academicSessionId");
 
   return courses;
 };
 
-export const getCourseWithLecturers = async (courseId: string) => {
-  const course = await Course.findById(courseId).populate("lecturerIds");
+export const getCourse = async (courseId: string) => {
+  const course = await Course.findById(courseId).populate("academicSessionId");
 
   if (!course) {
     throw new Error("Course not found");
@@ -20,121 +20,113 @@ export const getCourseWithLecturers = async (courseId: string) => {
 };
 
 export const createCourse = async (input: CreateCourseInput) => {
-  const { courseCode, courseTitle, unit, semester, level, lecturerIds } = input;
-
-  const existingCourse = await Course.findOne({ courseCode });
-  if (existingCourse) throw new Error("Course already exists");
-
-  let finalLecturerIds: string[] = [];
-
-  if (lecturerIds && lecturerIds.length > 0) {
-    const lecturers = await Lecturer.find({
-      _id: { $in: lecturerIds }
-    });
-
-    if (lecturers.length !== lecturerIds.length) {
-      throw new Error("One or more lecturers do not exist");
-    }
-
-    finalLecturerIds = lecturerIds;
+  const {
+    courseCode,
+    courseTitle,
+    unit,
+    semester,
+    level,
+    academicSessionId,
+  } = input;
+  
+  const academicSession = await AcademicSession.findById(
+    academicSessionId
+  );
+  
+  if (!academicSession) {
+    throw new Error("Academic session not found");
   }
-
+  
+  const existingCourse = await Course.findOne({
+    courseCode,
+    academicSessionId,
+  });
+  
+  if (existingCourse) {
+    throw new Error(
+      "Course already exists for this academic session"
+    );
+  }
+  
   const course = new Course({
     courseCode,
     courseTitle,
     unit,
     semester,
     level,
-    lecturerIds: finalLecturerIds
+    academicSessionId,
   });
-
+  
   await course.save();
+  
   return course;
 };
 
-export const assignLecturersToCourse = async (input: AssignLecturersInput) => {
-  const { courseId, lecturerIds } = input;
+export const updateCourse = async (
+  input: UpdateCourseInput
+) => {
+  const {
+    courseId,
+    courseCode,
+    courseTitle,
+    unit,
+    semester,
+    level,
+    academicSessionId,
+  } = input;
 
   const course = await Course.findById(courseId);
-  if (!course) throw new Error("Course not found");
 
-  const lecturers = await Lecturer.find({
-    _id: { $in: lecturerIds },
-  });
-
-  if (lecturers.length !== lecturerIds.length) {
-    throw new Error("One or more lecturers not found");
+  if (!course) {
+    throw new Error("Course not found");
   }
 
-  // 1. remove duplicates from input
-  const uniqueLecturerIds = [...new Set(lecturerIds)];
-
-  // 2. convert existing + new into one set
-  const mergedLecturers = new Set([
-    ...course.lecturerIds.map((id) => id.toString()),
-    ...uniqueLecturerIds,
-  ]);
-
-  // 3. update course
-  course.lecturerIds = Array.from(mergedLecturers) as any;
-
-  await course.save();
-
-  return course;
-};
-
-export const replaceLecturersForCourse = async (
-  input: ReplaceLecturersInput
-) => {
-  const { courseId, lecturerIds } = input;
-
-  // 1. Check course exists
-  const course = await Course.findById(courseId);
-  if (!course) throw new Error("Course not found");
-
-  // 2. Validate lecturers exist
-  const lecturers = await Lecturer.find({
-    _id: { $in: lecturerIds },
-  });
-
-  if (lecturers.length !== lecturerIds.length) {
-    throw new Error("One or more lecturers not found");
-  }
-
-  // 3. Remove duplicates from input
-  const uniqueLecturerIds = [...new Set(lecturerIds)];
-
-  // 4. Replace completely (NO merging)
-  course.lecturerIds = uniqueLecturerIds as any;
-
-  await course.save();
-
-  return course;
-};
-
-export const removeLecturerFromCourse = async (
-  courseId: string,
-  lecturerId: string
-) => {
-  // 1. Find course
-  const course = await Course.findById(courseId);
-  if (!course) throw new Error("Course not found");
-
-  // 2. Check if lecturer exists in course
-  const exists = course.lecturerIds.some(
-    (id) => id.toString() === lecturerId
+  const academicSession = await AcademicSession.findById(
+    academicSessionId
   );
 
-  if (!exists) {
-    throw new Error("Lecturer not assigned to this course");
+  if (!academicSession) {
+    throw new Error("Academic session not found");
   }
 
-  // 3. Remove lecturer
-  course.lecturerIds = course.lecturerIds.filter(
-    (id) => id.toString() !== lecturerId
-  );
+  const existingCourse = await Course.findOne({
+    courseCode,
+    academicSessionId,
+    _id: { $ne: courseId },
+  });
+
+  if (existingCourse) {
+    throw new Error(
+      "Course already exists for this academic session"
+    );
+  }
+
+  course.courseCode = courseCode;
+  course.courseTitle = courseTitle;
+  course.unit = unit;
+  course.semester = semester;
+  course.level = level;
+  course.academicSessionId = academicSessionId as any;
 
   await course.save();
 
   return course;
+};
+
+export const deleteCourse = async (
+  courseId: string
+) => {
+  const course = await Course.findById(courseId);
+
+  if (!course) {
+    throw new Error("Course not found");
+  }
+
+  await CourseAssignment.deleteMany({
+      courseId,
+  });
+  
+  await course.deleteOne();
+
+  return;
 };

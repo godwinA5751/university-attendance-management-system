@@ -4,15 +4,15 @@ export interface CreateCourseInput{
   unit: number
   semester: "First" | "Second"
   level: 100 | 200 | 300 | 400 | 500 | 600 | 700;
-  lecturerIds?: string[]
+  academicSessionId: string
 }
 
-export interface AssignLecturersInput {
+export interface UpdateCourseInput {
   courseId: string;
-  lecturerIds: string[];
-}
-
-export interface ReplaceLecturersInput {
-  courseId: string;
-  lecturerIds: string[];
+  courseCode: string;
+  courseTitle: string;
+  unit: number;
+  semester: "First" | "Second";
+  level: 100 | 200 | 300 | 400 | 500 | 600;
+  academicSessionId: string;
 }

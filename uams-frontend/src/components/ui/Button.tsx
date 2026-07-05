@@ -1,14 +1,24 @@
+import React from "react";
 import Spinner from "./Spinner";
 
 interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
+
   variant?:
     | "primary"
     | "secondary"
+    | "success"
     | "danger"
-    | "success";
+    | "warning";
+
   loading?: boolean;
+
+  leftIcon?: React.ReactNode;
+
+  rightIcon?: React.ReactNode;
+
+  fullWidth?: boolean;
 }
 
 export default function Button({
@@ -16,6 +26,9 @@ export default function Button({
   variant = "primary",
   loading = false,
   disabled,
+  leftIcon,
+  rightIcon,
+  fullWidth = false,
   className = "",
   ...props
 }: ButtonProps) {
@@ -26,17 +39,20 @@ export default function Button({
     secondary:
       "bg-gray-200 hover:bg-gray-300 text-gray-800",
 
+    success:
+      "bg-green-600 hover:bg-green-700 text-white",
+
     danger:
       "bg-red-600 hover:bg-red-700 text-white",
 
-    success:
-      "bg-green-600 hover:bg-green-700 text-white",
+    warning:
+      "bg-yellow-500 hover:bg-yellow-600 text-white",
   };
 
   return (
     <button
       {...props}
-      disabled={loading || disabled}
+      disabled={disabled || loading}
       className={`
         inline-flex
         items-center
@@ -44,18 +60,34 @@ export default function Button({
         gap-2
         rounded-lg
         px-4
-        py-2
+        py-2.5
+        text-sm
         font-medium
         transition-all
+        duration-200
+
+        cursor-pointer
         disabled:opacity-50
         disabled:cursor-not-allowed
+
         ${variants[variant]}
+
+        ${fullWidth ? "w-full" : ""}
+
         ${className}
       `}
     >
-      {loading && <Spinner size="sm" />}
+      {loading ? (
+        <Spinner size="sm" />
+      ) : (
+        <>
+          {leftIcon}
 
-      {children}
+          <span>{children}</span>
+
+          {rightIcon}
+        </>
+      )}
     </button>
   );
 }

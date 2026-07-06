@@ -16,3 +16,12 @@ export interface UpdateCourseInput {
   level: 100 | 200 | 300 | 400 | 500 | 600;
   academicSessionId: string;
 }
+
+export interface GetCoursesQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  level?: number;
+  semester?: "First" | "Second";
+  academicSessionId?: string;
+}

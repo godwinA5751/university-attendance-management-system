@@ -14,7 +14,6 @@ export const assignLecturersToCourse = async (
   const { courseId, lecturerIds } = input;
 
   const course = await Course.findById(courseId);
-
   if (!course) {
     throw new Error("Course not found");
   }
@@ -22,7 +21,6 @@ export const assignLecturersToCourse = async (
   const lecturers = await Lecturer.find({
     _id: { $in: lecturerIds },
   });
-
   if (lecturers.length !== lecturerIds.length) {
     throw new Error("One or more lecturers not found");
   }
@@ -47,21 +45,42 @@ export const assignLecturersToCourse = async (
     );
   }
 
-  return await CourseAssignment.find({
-    courseId,
-  })
+  const assignments = await CourseAssignment.find({ courseId })
     .populate("courseId")
-    .populate("lecturerId")
+    .populate({
+      path: "lecturerId",
+      populate: {
+        path: "userId",
+        select: "firstName lastName",
+      },
+    })
     .populate("academicSessionId");
+
+  return assignments.map((assignment) => {
+    const lecturer = assignment.lecturerId as any;
+    const user = lecturer.userId as any;
+
+    return {
+      _id: assignment._id,
+      course: assignment.courseId,
+      academicSession: assignment.academicSessionId,
+      lecturer: {
+        _id: lecturer._id,
+        staffNumber: lecturer.staffNumber,
+        department: lecturer.department,
+        faculty: lecturer.faculty,
+        lecturerName: `${user.firstName} ${user.lastName}`,
+      },
+    };
+  });
 };
 
-export const replaceLecturersForCourse = async (
+export const replaceCourseLecturers = async (
   input: ReplaceLecturersInput
 ) => {
   const { courseId, lecturerIds } = input;
 
   const course = await Course.findById(courseId);
-
   if (!course) {
     throw new Error("Course not found");
   }
@@ -69,7 +88,6 @@ export const replaceLecturersForCourse = async (
   const lecturers = await Lecturer.find({
     _id: { $in: lecturerIds },
   });
-
   if (lecturers.length !== lecturerIds.length) {
     throw new Error("One or more lecturers not found");
   }
@@ -91,13 +109,37 @@ export const replaceLecturersForCourse = async (
     }))
   );
 
-  return await CourseAssignment.find({
+  const assignments = await CourseAssignment.find({
     courseId,
     academicSessionId: course.academicSessionId,
   })
     .populate("courseId")
-    .populate("lecturerId")
+    .populate({
+      path: "lecturerId",
+      populate: {
+        path: "userId",
+        select: "firstName lastName",
+      },
+    })
     .populate("academicSessionId");
+
+  return assignments.map((assignment) => {
+    const lecturer = assignment.lecturerId as any;
+    const user = lecturer.userId as any;
+
+    return {
+      _id: assignment._id,
+      course: assignment.courseId,
+      academicSession: assignment.academicSessionId,
+      lecturer: {
+        _id: lecturer._id,
+        staffNumber: lecturer.staffNumber,
+        department: lecturer.department,
+        faculty: lecturer.faculty,
+        lecturerName: `${user.firstName} ${user.lastName}`,
+      },
+    };
+  });
 };
 
 export const removeLecturerFromCourse = async (
@@ -128,32 +170,90 @@ export const removeLecturerFromCourse = async (
   };
 };
 
-export const getLecturersForCourse = async (
+export const getAssignedLecturersForCourse = async (
   courseId: string
 ) => {
+  const course = await Course.findById(courseId);
+
+  if (!course) {
+    throw new Error("Course not found");
+  }
+
   const assignments = await CourseAssignment.find({
     courseId,
-  }).populate("lecturerId");
+    academicSessionId: course.academicSessionId,
+  }).populate({
+    path: "lecturerId",
+    populate: {
+      path: "userId",
+      select: "firstName lastName",
+    },
+  });
 
-  return assignments.map(
-    (assignment) => assignment.lecturerId
-  );
+  return assignments.map((assignment) => {
+    const lecturer = assignment.lecturerId as any;
+    const user = lecturer.userId as any;
+
+    return {
+      _id: lecturer._id,
+      staffNumber: lecturer.staffNumber,
+      department: lecturer.department,
+      faculty: lecturer.faculty,
+      lecturerName: `${user.firstName} ${user.lastName}`,
+    };
+  });
+};
+
+export const getLecturersForCourse = async (courseId: string) => {
+  const assignments = await CourseAssignment.find({ courseId }).populate({
+    path: "lecturerId",
+    populate: {
+      path: "userId",
+      select: "firstName lastName",
+    },
+  });
+
+  return assignments.map((assignment) => {
+    const lecturer = assignment.lecturerId as any;
+    const user = lecturer.userId as any;
+    return {
+      _id: lecturer._id,
+      staffNumber: lecturer.staffNumber,
+      department: lecturer.department,
+      faculty: lecturer.faculty,
+      lecturerName: `${user.firstName} ${user.lastName}`,
+    };
+  });
 };
 
 export const getLecturersGroupedByCourse = async () => {
-  const assignments = await CourseAssignment.find()
-    .populate("lecturerId");
+  const assignments = await CourseAssignment.find().populate({
+    path: "lecturerId",
+    populate: {
+      path: "userId",
+      select: "firstName lastName",
+    },
+  });
 
   const grouped: Record<string, any[]> = {};
 
   assignments.forEach((assignment) => {
     const key = assignment.courseId.toString();
+    const lecturer = assignment.lecturerId as any;
+    const user = lecturer.userId as any;
+
+    const formattedLecturer = {
+      _id: lecturer._id,
+      staffNumber: lecturer.staffNumber,
+      department: lecturer.department,
+      faculty: lecturer.faculty,
+      lecturerName: `${user.firstName} ${user.lastName}`,
+    };
 
     if (!grouped[key]) {
       grouped[key] = [];
     }
-
-    grouped[key].push(assignment.lecturerId);
+    grouped[key].push(formattedLecturer);
   });
 
   return grouped;

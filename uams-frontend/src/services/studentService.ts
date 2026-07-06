@@ -5,7 +5,7 @@ export const getStudents = async (
   limit = 10
 ) => {
   const response = await api.get(
-    `/api/students?page=${page}&limit=${limit}`
+    `/students?page=${page}&limit=${limit}`
   );
 
   return response.data;

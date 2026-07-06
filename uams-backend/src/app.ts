@@ -20,16 +20,16 @@ app.get("/", (req, res) => {
   res.send("UAMS API is running 🚀");
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
 
-app.use("/api/students", studentRoutes);
-app.use("/api/lecturers", lecturerRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/academic-sessions", academicSessionRoutes);
-app.use("/api/enrollments", enrollmentRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/course-assignment", courseAssignmentRoutes);
-app.use("/api/analytics", analyticsRoutes);
+app.use("/students", studentRoutes);
+app.use("/lecturers", lecturerRoutes);
+app.use("/courses", courseRoutes);
+app.use("/academic-sessions", academicSessionRoutes);
+app.use("/enrollments", enrollmentRoutes);
+app.use("/attendance", attendanceRoutes);
+app.use("/course-assignments", courseAssignmentRoutes);
+app.use("/analytics", analyticsRoutes);
 
 
 export default app;

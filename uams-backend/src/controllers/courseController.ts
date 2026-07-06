@@ -28,10 +28,13 @@ export const getAllCoursesController = async (
   res: Response
 ) => {
   try {
-    const courses = await getAllCourses();
-    
-    const lecturersGrouped =
-      await getLecturersGroupedByCourse();
+    const [
+      { courses, pagination },
+      lecturersGrouped,
+    ] = await Promise.all([
+      getAllCourses(req.query),
+      getLecturersGroupedByCourse(),
+    ]);
     
     const data = courses.map((course) => ({
       ...course.toObject(),
@@ -42,6 +45,7 @@ export const getAllCoursesController = async (
     res.status(200).json({
       message: "Courses fetched successfully",
       data,
+      pagination
     });
   } catch (error) {
     if (error instanceof Error) {

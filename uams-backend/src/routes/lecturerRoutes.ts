@@ -1,11 +1,17 @@
 import express from "express";
-import { createLecturerController, getLecturerCoursesController, lecturerProfileController } from "../controllers/lecturerController.js";
+import { createLecturerController, getAllLecturersController, getLecturerCoursesController, lecturerProfileController } from "../controllers/lecturerController.js";
 import { lecturerAttendanceReportController } from "../controllers/lecturerAttendanceController.js";
 import { verifyJWT } from "../middleware/verifyJWT.js";
 import { authorize } from "../middleware/authorize.js";
 
 const router = express.Router();
 
+router.get(
+  "/",
+  verifyJWT,
+  authorize(["admin"]),
+  getAllLecturersController
+);
 
 router.get(
   "/courses",

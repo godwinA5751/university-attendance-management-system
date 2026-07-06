@@ -2,11 +2,66 @@ import type { CreateCourseInput, UpdateCourseInput } from "../types/course.types
 import { AcademicSession } from "../models/AcademicSession.js";
 import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+// import type { QueryFilter } from "../types/query.types.js";
 
-export const getAllCourses = async () => {
-  const courses = await Course.find().populate("academicSessionId");
+export const getAllCourses = async (
+  query: any
+) => {
+  // const courses = await Course.find().populate("academicSessionId");
 
-  return courses;
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  
+  const skip = (page - 1) * limit;
+  
+  const filter: any = {};
+  if (query.level) {
+    filter.level = Number(query.level);
+  }
+  
+  if (query.semester) {
+    filter.semester = query.semester;
+  }
+  
+  if (query.academicSessionId) {
+    filter.academicSessionId = query.academicSessionId;
+  }
+  
+  if (query.search) {
+    filter.$or = [
+      {
+        courseCode: {
+          $regex: query.search,
+          $options: "i",
+        },
+      },
+      {
+        courseTitle: {
+          $regex: query.search,
+          $options: "i",
+        },
+      },
+    ];
+  }
+  const total = await Course.countDocuments(filter);
+  
+  const courses = await Course.find(filter)
+    .populate("academicSessionId")
+    .sort({
+      level: 1,
+      courseCode: 1,
+    })
+    .skip(skip)
+    .limit(limit);
+  return {
+    courses,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 export const getCourse = async (courseId: string) => {

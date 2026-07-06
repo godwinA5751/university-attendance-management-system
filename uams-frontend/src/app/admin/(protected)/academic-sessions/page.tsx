@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+
 import axios from "axios";
 
 import {
@@ -31,6 +33,7 @@ import { useNotification } from "@/context/NotificationContext";
 import { Plus } from "lucide-react";
 
 export default function AcademicSessionsPage() {
+  const navigate = useRouter();
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -55,7 +58,7 @@ export default function AcademicSessionsPage() {
     }
   }, [sessions]);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -64,6 +67,10 @@ export default function AcademicSessionsPage() {
       setSessions(data);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          navigate.push("/login");
+          return;
+        }
         notify(
           "error",
           error.response?.data?.message ??
@@ -78,13 +85,13 @@ export default function AcademicSessionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [notify]);
 
   useEffect(() => {
     setTimeout(() => {
       fetchSessions();
     }, 0);
-  }, []);
+  }, [fetchSessions]);
 
   const handleCreate = async (
     data: CreateAcademicSessionInput

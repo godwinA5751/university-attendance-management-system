@@ -79,7 +79,7 @@ export default function Modal({
         
             <button
               onClick={onClose}
-              className="text-2xl text-gray-500 hover:text-gray-700"
+              className="text-2xl text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               ×
             </button>

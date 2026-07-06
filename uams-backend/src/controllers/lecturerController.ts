@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createLecturer, getLecturerCourses, getLecturerProfile } from "../services/lecturerService.js"
+import { createLecturer, getLecturerCourses, getLecturerProfile, getAllLecturers } from "../services/lecturerService.js"
 
 export const getLecturerCoursesController = async (
   req: Request,
@@ -34,6 +34,7 @@ export const createLecturerController = async (req: Request, res: Response) => {
           role: user.role,
         },
         lecturer,
+        lecturerName: `${user.firstName} ${user.lastName}`,
       },
     });
   } catch (error) {
@@ -77,6 +78,27 @@ export const lecturerProfileController = async (
 
     return res.status(500).json({
       message: "Internal server error",
+    });
+  }
+};
+
+export const getAllLecturersController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const lecturers = await getAllLecturers();
+
+    return res.status(200).json({
+      message: "Lecturers fetched successfully",
+      data: lecturers,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Internal server error",
     });
   }
 };

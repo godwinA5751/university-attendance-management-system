@@ -36,7 +36,11 @@ export const createLecturer = async (data: CreateLecturerInput) => {
 
   await lecturer.save();
 
-  return {user, lecturer}
+  return {
+      user,
+      lecturer,
+      lecturerName: `${user.firstName} ${user.lastName}`,
+    };
 }
 
 export const getLecturerCourses = async (lecturerId: string) => {
@@ -68,4 +72,23 @@ export const getLecturerProfile = async (
     department: lecturer.department,
     faculty: lecturer.faculty,
   };
+};
+
+export const getAllLecturers = async () => {
+  const lecturers = await Lecturer.find().populate({
+    path: "userId",
+    select: "firstName lastName",
+  });
+
+  return lecturers.map((lecturer) => {
+    const user = lecturer.userId as any;
+
+    return {
+      _id: lecturer._id,
+      staffNumber: lecturer.staffNumber,
+      department: lecturer.department,
+      faculty: lecturer.faculty,
+      lecturerName: `${user.firstName} ${user.lastName}`,
+    };
+  });
 };

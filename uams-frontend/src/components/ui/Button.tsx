@@ -1,4 +1,6 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
+
 import Spinner from "./Spinner";
 
 interface ButtonProps
@@ -10,7 +12,9 @@ interface ButtonProps
     | "secondary"
     | "success"
     | "danger"
-    | "warning";
+    | "warning"
+    | "logout";
+
 
   loading?: boolean;
 
@@ -47,13 +51,17 @@ export default function Button({
 
     warning:
       "bg-yellow-500 hover:bg-yellow-600 text-white",
+
+    logout:
+      "bg-transparent border border-white/20 justify-start gap-2 text-white",
   };
 
   return (
     <button
       {...props}
       disabled={disabled || loading}
-      className={`
+      className={twMerge(
+        `
         inline-flex
         items-center
         justify-center
@@ -65,17 +73,14 @@ export default function Button({
         font-medium
         transition-all
         duration-200
-
         cursor-pointer
         disabled:opacity-50
         disabled:cursor-not-allowed
-
         ${variants[variant]}
-
         ${fullWidth ? "w-full" : ""}
-
-        ${className}
-      `}
+        `,
+        className
+      )}
     >
       {loading ? (
         <Spinner size="sm" />

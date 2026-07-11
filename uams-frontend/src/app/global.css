@@ -1,1 +1,59 @@
 @import "tailwindcss";
+
+.scroll-custom {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-custom:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+.scroll-custom::-webkit-scrollbar {
+  width: 2px;
+}
+
+.scroll-custom::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-custom::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 20px;
+}
+
+.scroll-custom:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.scroll-custom:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.scroll-custom::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.sidebar-notch-top,
+.sidebar-notch-bottom {
+  position: absolute;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+}
+
+.sidebar-notch-top {
+  top: -40px;
+  border-bottom-right-radius: 28px;
+  box-shadow: 10px 10px 0 white;
+}
+
+.sidebar-notch-bottom {
+  bottom: -36px;
+  border-top-right-radius: 28px;
+  box-shadow: 10px -10px 0 white;
+  height: 44px;
+}

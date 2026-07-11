@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
+import Sidebar from "@/components/sidebar/Sidebar";
 
 export default function ProtectedLayout({
   children,
@@ -28,14 +27,11 @@ export default function ProtectedLayout({
   if (checkingAuth) return null;
   
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex-1">
-        <Topbar />
-        <main className="p-4">
-          {children}
+      <main className="flex-1 bg-white p-6 overflow-y-auto">
+        {children}
         </main>
-      </div>
     </div>
   );
 }

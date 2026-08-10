@@ -1,5 +1,13 @@
 import express from "express";
-import { createLecturerController, getAllLecturersController, getLecturerCoursesController, lecturerProfileController } from "../controllers/lecturerController.js";
+import {
+  createLecturerController,
+  deleteLecturerController,
+  getAllLecturersController,
+  getLecturerController,
+  getLecturerCoursesController,
+  lecturerProfileController,
+  updateLecturerController,
+} from "../controllers/lecturerController.js";
 import { lecturerAttendanceReportController } from "../controllers/lecturerAttendanceController.js";
 import { verifyJWT } from "../middleware/verifyJWT.js";
 import { authorize } from "../middleware/authorize.js";
@@ -14,23 +22,47 @@ router.get(
 );
 
 router.get(
-  "/courses",
+  "/:id",
   verifyJWT,
-  authorize(["lecturer"]),
-  getLecturerCoursesController
+  authorize(["admin"]),
+  getLecturerController
 );
-router.get(
-  "/attendance-report",
-  verifyJWT,
-  authorize(["lecturer"]),
-  lecturerAttendanceReportController
-);
+
 router.post(
   "/",
   verifyJWT,
   authorize(["admin"]),
   createLecturerController
 );
+
+router.patch(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  updateLecturerController
+);
+
+router.delete(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  deleteLecturerController
+);
+
+router.get(
+  "/courses",
+  verifyJWT,
+  authorize(["lecturer"]),
+  getLecturerCoursesController
+);
+
+router.get(
+  "/attendance-report",
+  verifyJWT,
+  authorize(["lecturer"]),
+  lecturerAttendanceReportController
+);
+
 router.get(
   "/profile",
   verifyJWT,

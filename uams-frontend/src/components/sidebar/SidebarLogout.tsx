@@ -14,12 +14,15 @@ const handleLogout = () => {
   router.replace("/login");
 };
   return (
-    <Button
-      leftIcon={<LogOut size={18} />}
-      variant="logout"
-      onClick={handleLogout}
-    >
-      Logout
-    </Button>
+    <div className="flex items-center lg:px-8 justify-center">
+      <Button
+        leftIcon={<LogOut size={18} />}
+        variant="logout"
+        onClick={handleLogout}
+        fullWidth
+      >
+        <span className="hidden lg:block">Logout</span>
+      </Button>
+    </div>
   );
 }

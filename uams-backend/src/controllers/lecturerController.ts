@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createLecturer, getLecturerCourses, getLecturerProfile, getAllLecturers } from "../services/lecturerService.js"
+import { createLecturer, getLecturerCourses, getLecturerProfile, getLecturerById, getAllLecturers, updateLecturer, deleteLecturer } from "../services/lecturerService.js"
 
 export const getLecturerCoursesController = async (
   req: Request,
@@ -87,11 +87,13 @@ export const getAllLecturersController = async (
   res: Response
 ) => {
   try {
-    const lecturers = await getAllLecturers();
-
-    return res.status(200).json({
+    const { data, pagination } =
+      await getAllLecturers(req.query as any);
+    
+    res.status(200).json({
       message: "Lecturers fetched successfully",
-      data: lecturers,
+      data,
+      pagination,
     });
   } catch (error) {
     return res.status(500).json({
@@ -99,6 +101,82 @@ export const getAllLecturersController = async (
         error instanceof Error
           ? error.message
           : "Internal server error",
+    });
+  }
+};
+
+export const getLecturerController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const lecturer = await getLecturerById(
+      req.params.id as string
+    );
+
+    return res.status(200).json({
+      message: "Lecturer fetched successfully",
+      data: lecturer,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(404).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+export const updateLecturerController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const lecturer = await updateLecturer(
+      req.params.id as string,
+      req.body
+    );
+
+    return res.status(200).json({
+      message: "Lecturer updated successfully",
+      data: lecturer,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+export const deleteLecturerController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    await deleteLecturer(req.params.id as string);
+
+    return res.status(200).json({
+      message: "Lecturer deleted successfully",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(404).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
     });
   }
 };

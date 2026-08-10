@@ -5,14 +5,15 @@ import {
   UpdateCourseInput,
 } from "@/types/course";
 
-export interface GetCoursesParams {
+type GetCoursesParams = {
   page?: number;
   limit?: number;
   search?: string;
   level?: number;
-  semester?: "First" | "Second";
+  semester?: string;
   academicSessionId?: string;
-}
+  maxLevel?: number;
+};
 
 export const getCourses = async (
   params?: GetCoursesParams

@@ -17,7 +17,7 @@ export default function SidebarItem({
   active,
 }: SidebarItemProps) {
   return (
-    <li className="relative h-14">
+    <li className="relative h-12">
       <Link
         href={href}
         className={`
@@ -26,21 +26,23 @@ export default function SidebarItem({
           flex
           h-14
           items-center
-          gap-2
-          px-4
+          gap-0
+          lg:gap-2
+          px-2
+          lg:px-4
           rounded-full
           transition-colors
           duration-300
           ${
             active
-              ? "text-blue-700 font-semibold translate-x-2 pb-2"
+              ? "text-blue-700 font-semibold pb-2"
               : "text-white hover:text-white"
           }
         `}
       >
         <Icon size={22} />
 
-        <span>{label}</span>
+        <span className="hidden lg:block">{label}</span>
       </Link>
     </li>
   );

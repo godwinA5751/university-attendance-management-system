@@ -7,7 +7,7 @@ import { AcademicSession } from "../models/AcademicSession.js";
 export const createCourseEnrollment = async (
   input: CreateCourseEnrollmentInput
 ) => {
-  const { studentId, courseId, sessionId } = input;
+  const { studentId, courseId, academicSessionId } = input;
 
   // 1. Verify student exists
   const student = await Student.findById(studentId);
@@ -22,7 +22,7 @@ export const createCourseEnrollment = async (
   }
 
   // 3. Verify session exists
-  const session = await AcademicSession.findById(sessionId);
+  const session = await AcademicSession.findById(academicSessionId);
   if (!session) {
     throw new Error("Academic session not found");
   }
@@ -31,7 +31,7 @@ export const createCourseEnrollment = async (
   const existingEnrollment = await CourseEnrollment.findOne({
     studentId,
     courseId,
-    sessionId,
+    academicSessionId,
   });
 
   if (existingEnrollment) {
@@ -42,7 +42,7 @@ export const createCourseEnrollment = async (
   const enrollment = new CourseEnrollment({
     studentId,
     courseId,
-    sessionId,
+    academicSessionId,
     status: "active",
   });
 

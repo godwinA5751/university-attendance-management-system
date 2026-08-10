@@ -69,8 +69,9 @@ export default function Sidebar() {
       className="
         relative
         h-full
-        w-62
-        bg-gradient-to-b
+        w-20
+        lg:w-62
+        bg-linear-to-b
         from-[#2563EB]
         via-[#1D4ED8]
         to-[#172554]
@@ -79,13 +80,13 @@ export default function Sidebar() {
         text-white
       "
     >
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col pb-6">
 
         <Profile />
 
         <nav className="flex-1 pl-4">
           <ul className="relative space-y-2">
-            {navigationItems.map((item, index) => {
+            {navigationItems.map((item) => {
               const active = pathname === item.href;
         
               return (
@@ -101,7 +102,7 @@ export default function Sidebar() {
                       className="absolute inset-0 z-0"
                     >
                       {/* White pill */}
-                      <div className="h-12 rounded-l-full rounded-r-none bg-white shadow-xl" />
+                      <div className="h-12 rounded-l-full rounded-r-none bg-white shadow-lg" />
         
                       {/* top notch */}
                       <div className="sidebar-notch-top" />
@@ -122,11 +123,7 @@ export default function Sidebar() {
             })}
           </ul>
         </nav>
-
-        <div className="px-4 pb-6 pt-4">
-          <SidebarLogout />
-        </div>
-
+        <SidebarLogout />
       </div>
     </aside>
   );

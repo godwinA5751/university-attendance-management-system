@@ -2,6 +2,7 @@ import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
 import type { CreateAttendanceInput } from "../types/attendance.types.js";
 import { Course } from "../models/Course.js";
+import { CourseAssignment } from "../models/CourseAssignment.js";
 
 export const getAttendanceByStudent = async (studentId: string) => {
   const enrollments = await CourseEnrollment.find({ studentId });
@@ -46,17 +47,22 @@ export const createAttendance = async (input: CreateAttendanceInput, lecturerId:
 
   // 2. Check course
   const course = await Course.findById(enrollment.courseId);
-  if (!course) throw new Error("Course not found");
-
-  // 3. AUTH CHECK (NEW PART)
-  const isLecturerAssigned = course.lecturerIds.some(
-    (id) => id.toString() === lecturerId
-  );
-
-  if (!isLecturerAssigned) {
-    throw new Error("Not authorized to mark attendance for this course");
+  if (!course) {
+    throw new Error("Course not found");
   }
-
+  
+  // 3. Authorization
+  const assignment = await CourseAssignment.findOne({
+    courseId: enrollment.courseId,
+    lecturerId,
+    academicSessionId: enrollment.academicSessionId,
+  });
+  
+  if (!assignment) {
+    throw new Error(
+      "Not authorized to mark attendance for this course"
+    );
+  }
   // 4. Validate date
   const attendanceDate = new Date(dateTime);
   if (isNaN(attendanceDate.getTime())) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, FormGrid, FormSection, FormActions} from "@/components/ui";
 import { CreateAcademicSessionInput } from "@/types/academicSession";
 import { Plus } from "lucide-react";
 
@@ -97,41 +97,42 @@ export default function AcademicSessionForm({
   };
 
   return (
-    <form
+    <FormSection
       onSubmit={handleSubmit}
-      className="space-y-5"
     >
-      <Input
-        label="Academic Session"
-        name="sessionName"  
-        required
-        placeholder="2025/2026"
-        value={formData.sessionName}
-        onChange={handleChange}
-        error={errors.sessionName}
-      />
+      <FormGrid columns={2}>
+        <Input
+          label="Academic Session"
+          name="sessionName"  
+          required
+          placeholder="2025/2026"
+          value={formData.sessionName}
+          onChange={handleChange}
+          error={errors.sessionName}
+        />
 
-      <Input
-        label="Start Date"
-        type="date"
-        name="startDate"
-        required
-        value={formData.startDate}
-        onChange={handleChange}
-        error={errors.startDate}
-      />
+        <Input
+          label="Start Date"
+          type="date"
+          name="startDate"
+          required
+          value={formData.startDate}
+          onChange={handleChange}
+          error={errors.startDate}
+        />
 
-      <Input
-        label="End Date"
-        type="date"
-        name="endDate"
-        required
-        value={formData.endDate}
-        onChange={handleChange}
-        error={errors.endDate}
-      />
+        <Input
+          label="End Date"
+          type="date"
+          name="endDate"
+          required
+          value={formData.endDate}
+          onChange={handleChange}
+          error={errors.endDate}
+        />
+      </FormGrid>
 
-      <div className="flex justify-end">
+      <FormActions>
         <Button
           type="submit"
           loading={loading}
@@ -139,7 +140,7 @@ export default function AcademicSessionForm({
         >
           Create Session
         </Button>
-      </div>
-    </form>
+      </FormActions>
+    </FormSection>
   );
 }

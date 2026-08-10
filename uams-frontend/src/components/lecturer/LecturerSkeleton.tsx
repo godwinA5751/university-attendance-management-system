@@ -1,0 +1,85 @@
+import { Skeleton } from "@/components/ui";
+
+interface LecturerSkeletonProps {
+  rows?: number;
+}
+
+export default function LecturerSkeleton({
+  rows = 8,
+}: LecturerSkeletonProps) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <table className="w-full">
+        <thead className="border-b bg-gray-50">
+          <tr>
+            <th className="w-12 px-4 py-3">
+              <Skeleton className="mx-auto h-4 w-4" />
+            </th>
+
+            <th className="px-4 py-3 text-left">
+              <Skeleton className="h-4 w-28" />
+            </th>
+
+            <th className="px-4 py-3 text-left">
+              <Skeleton className="h-4 w-36" />
+            </th>
+
+            <th className="px-4 py-3 text-left">
+              <Skeleton className="h-4 w-24" />
+            </th>
+
+            <th className="px-4 py-3 text-left">
+              <Skeleton className="h-4 w-32" />
+            </th>
+
+            <th className="px-4 py-3 text-right">
+              <Skeleton className="ml-auto h-4 w-20" />
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {Array.from({ length: rows }).map((_, index) => (
+            <tr
+              key={index}
+              className="border-b last:border-b-0"
+            >
+              {/* Checkbox */}
+              <td className="px-4 py-4">
+                <Skeleton className="mx-auto h-4 w-4" />
+              </td>
+
+              {/* Staff Number */}
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-28" />
+              </td>
+
+              {/* Lecturer */}
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-40" />
+              </td>
+
+              {/* Faculty */}
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-24" />
+              </td>
+
+              {/* Department */}
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-32" />
+              </td>
+
+              {/* Actions */}
+              <td className="px-4 py-4">
+                <div className="flex justify-end gap-2">
+                  <Skeleton className="size-8 rounded-lg" />
+                  <Skeleton className="size-8 rounded-lg" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

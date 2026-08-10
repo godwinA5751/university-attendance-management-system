@@ -46,13 +46,13 @@
 }
 
 .sidebar-notch-top {
-  top: -40px;
+    top: -40px;
   border-bottom-right-radius: 28px;
   box-shadow: 10px 10px 0 white;
 }
 
 .sidebar-notch-bottom {
-  bottom: -36px;
+  bottom: -44px;
   border-top-right-radius: 28px;
   box-shadow: 10px -10px 0 white;
   height: 44px;

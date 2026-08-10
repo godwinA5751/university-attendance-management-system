@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar/Sidebar";
+import MobileWarningDialog from "@/components/ui/MobileWarningDialog";
+
 
 export default function ProtectedLayout({
   children,
@@ -28,10 +30,11 @@ export default function ProtectedLayout({
   
   return (
     <div className="flex h-screen overflow-hidden">
+      <MobileWarningDialog />
       <Sidebar />
-      <main className="flex-1 bg-white p-6 overflow-y-auto">
+      <main className="flex-1 bg-white pt-12 md:py-6 overflow-y-auto">
         {children}
-        </main>
+      </main>
     </div>
   );
 }

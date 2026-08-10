@@ -13,7 +13,9 @@ interface ButtonProps
     | "success"
     | "danger"
     | "warning"
-    | "logout";
+    | "logout"
+    | "outline"
+    | "ghost";
 
 
   loading?: boolean;
@@ -53,7 +55,25 @@ export default function Button({
       "bg-yellow-500 hover:bg-yellow-600 text-white",
 
     logout:
-      "bg-transparent border border-white/20 justify-start gap-2 text-white",
+      "bg-transparent lg:border border-white/20 lg:justify-start lg:gap-2 text-white transition-all duration-10",
+
+    outline: `
+      border
+      border-gray-300
+      bg-white
+      text-gray-700
+      hover:bg-gray-50
+      hover:border-gray-400
+      disabled:bg-gray-100
+      disabled:text-gray-400
+      disabled:border-gray-200
+    `,
+
+    ghost: `
+      bg-transparent
+      text-gray-700
+      hover:bg-gray-100
+    `
   };
 
   return (

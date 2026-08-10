@@ -14,7 +14,7 @@ const courseEnrollmentSchema = new mongoose.Schema(
       required: true,
     },
 
-    sessionId: {
+    academicSessionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AcademicSession",
       required: true,

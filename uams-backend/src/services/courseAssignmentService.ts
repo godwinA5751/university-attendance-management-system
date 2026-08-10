@@ -190,18 +190,24 @@ export const getAssignedLecturersForCourse = async (
     },
   });
 
-  return assignments.map((assignment) => {
-    const lecturer = assignment.lecturerId as any;
-    const user = lecturer.userId as any;
-
-    return {
-      _id: lecturer._id,
-      staffNumber: lecturer.staffNumber,
-      department: lecturer.department,
-      faculty: lecturer.faculty,
-      lecturerName: `${user.firstName} ${user.lastName}`,
-    };
-  });
+  return assignments
+    .filter(
+      (assignment: any) =>
+        assignment.lecturerId &&
+        assignment.lecturerId.userId
+    )
+    .map((assignment: any) => {
+      const lecturer = assignment.lecturerId;
+      const user = lecturer.userId;
+  
+      return {
+        _id: lecturer._id,
+        staffNumber: lecturer.staffNumber,
+        department: lecturer.department,
+        faculty: lecturer.faculty,
+        lecturerName: `${user.firstName} ${user.lastName}`,
+      };
+    });
 };
 
 export const getLecturersForCourse = async (courseId: string) => {
@@ -237,10 +243,15 @@ export const getLecturersGroupedByCourse = async () => {
 
   const grouped: Record<string, any[]> = {};
 
-  assignments.forEach((assignment) => {
+  assignments.forEach((assignment: any) => {
+    // Skip orphaned assignments
+    if (!assignment.lecturerId || !assignment.lecturerId.userId) {
+      return;
+    }
+
     const key = assignment.courseId.toString();
-    const lecturer = assignment.lecturerId as any;
-    const user = lecturer.userId as any;
+    const lecturer = assignment.lecturerId;
+    const user = lecturer.userId;
 
     const formattedLecturer = {
       _id: lecturer._id,
@@ -253,6 +264,7 @@ export const getLecturersGroupedByCourse = async () => {
     if (!grouped[key]) {
       grouped[key] = [];
     }
+
     grouped[key].push(formattedLecturer);
   });
 

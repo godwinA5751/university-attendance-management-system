@@ -2,7 +2,7 @@ import type { CreateCourseInput, UpdateCourseInput } from "../types/course.types
 import { AcademicSession } from "../models/AcademicSession.js";
 import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
-// import type { QueryFilter } from "../types/query.types.js";
+import { enrollExistingStudentsIntoCourse } from "./enrollmentSyncService.js";
 
 export const getAllCourses = async (
   query: any
@@ -15,8 +15,21 @@ export const getAllCourses = async (
   const skip = (page - 1) * limit;
   
   const filter: any = {};
-  if (query.level) {
-    filter.level = Number(query.level);
+  
+  const level = query.level
+    ? Number(query.level)
+    : undefined;
+  
+  const maxLevel = query.maxLevel
+    ? Number(query.maxLevel)
+    : undefined;
+  
+  if (level !== undefined) {
+    filter.level = level;
+  } else if (maxLevel !== undefined) {
+    filter.level = {
+      $lt: maxLevel,
+    };
   }
   
   if (query.semester) {
@@ -113,6 +126,12 @@ export const createCourse = async (input: CreateCourseInput) => {
   });
   
   await course.save();
+  
+  await enrollExistingStudentsIntoCourse({
+    courseId: course._id.toString(),
+    level: course.level,
+    academicSessionId: course.academicSessionId.toString(),
+  });
   
   return course;
 };

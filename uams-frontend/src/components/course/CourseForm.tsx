@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Input, Select, FormSection, FormGrid, FormActions } from "@/components/ui";
 
 import { AcademicSession } from "@/types/academicSession";
 
@@ -57,126 +57,127 @@ export default function CourseForm({
   };
 
   return (
-    <form
+    <FormSection
       onSubmit={handleSubmit}
-      className="space-y-5"
     >
-      <Input
-        label="Course Code"
-        placeholder="CSC201"
-        value={formData.courseCode}
-        onChange={(e) =>
-          handleChange(
-            "courseCode",
-            e.target.value.toUpperCase()
-          )
-        }
-        required
-      />
-
-      <Input
-        label="Course Title"
-        placeholder="Computer Programming"
-        value={formData.courseTitle}
-        onChange={(e) =>
-          handleChange(
-            "courseTitle",
-            e.target.value
-          )
-        }
-        required
-      />
-
-      <Input
-        label="Unit"
-        type="number"
-        min={1}
-        value={formData.unit}
-        onChange={(e) =>
-          handleChange(
-            "unit",
-            Number(e.target.value)
-          )
-        }
-        required
-      />
-
-      <Select
-        label="Level"
-        value={formData.level}
-        onChange={(e) =>
-          handleChange(
-            "level",
-            Number(e.target.value)
-          )
-        }
-      >
-        {[100, 200, 300, 400, 500, 600].map(
-          (level) => (
-            <option
-              key={level}
-              value={level}
-            >
-              {level} Level
-            </option>
-          )
-        )}
-      </Select>
-
-      <Select
-        label="Semester"
-        value={formData.semester}
-        onChange={(e) =>
-          handleChange(
-            "semester",
-            e.target.value as
-              | "First"
-              | "Second"
-          )
-        }
-      >
-        <option value="First">
-          First Semester
-        </option>
-
-        <option value="Second">
-          Second Semester
-        </option>
-      </Select>
-
-      <Select
-        label="Academic Session"
-        value={formData.academicSessionId}
-        onChange={(e) =>
-          handleChange(
-            "academicSessionId",
-            e.target.value
-          )
-        }
-        required
-      >
-        <option value="">
-          Select Academic Session
-        </option>
-
-        {sessions.map((session) => (
-          <option
-            key={session._id}
-            value={session._id}
-          >
-            {session.sessionName}
+      <FormGrid columns={2}>
+        <Input
+          label="Course Code"
+          placeholder="CSC201"
+          value={formData.courseCode}
+          onChange={(e) =>
+            handleChange(
+              "courseCode",
+              e.target.value.toUpperCase()
+            )
+          }
+          required
+        />
+  
+        <Input
+          label="Course Title"
+          placeholder="Computer Programming"
+          value={formData.courseTitle}
+          onChange={(e) =>
+            handleChange(
+              "courseTitle",
+              e.target.value
+            )
+          }
+          required
+        />
+  
+        <Input
+          label="Unit"
+          type="number"
+          min={1}
+          value={formData.unit}
+          onChange={(e) =>
+            handleChange(
+              "unit",
+              Number(e.target.value)
+            )
+          }
+          required
+        />
+  
+        <Select
+          label="Level"
+          value={formData.level}
+          onChange={(e) =>
+            handleChange(
+              "level",
+              Number(e.target.value)
+            )
+          }
+        >
+          {[100, 200, 300, 400, 500, 600].map(
+            (level) => (
+              <option
+                key={level}
+                value={level}
+              >
+                {level} Level
+              </option>
+            )
+          )}
+        </Select>
+  
+        <Select
+          label="Semester"
+          value={formData.semester}
+          onChange={(e) =>
+            handleChange(
+              "semester",
+              e.target.value as
+                | "First"
+                | "Second"
+            )
+          }
+        >
+          <option value="First">
+            First Semester
           </option>
-        ))}
-      </Select>
+  
+          <option value="Second">
+            Second Semester
+          </option>
+        </Select>
+  
+        <Select
+          label="Academic Session"
+          value={formData.academicSessionId}
+          onChange={(e) =>
+            handleChange(
+              "academicSessionId",
+              e.target.value
+            )
+          }
+          required
+        >
+          <option value="">
+            Select Academic Session
+          </option>
+  
+          {sessions.map((session) => (
+            <option
+              key={session._id}
+              value={session._id}
+            >
+              {session.sessionName}
+            </option>
+          ))}
+        </Select>
+      </FormGrid>
 
-      <div className="flex justify-end">
+      <FormActions>
         <Button
           type="submit"
           loading={loading}
         >
           Save Course
         </Button>
-      </div>
-    </form>
+      </FormActions>
+    </FormSection>
   );
 }

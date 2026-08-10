@@ -3,6 +3,11 @@ import {useState} from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import api from "@/lib/axios";
+
+import {
+  Button
+} from "@/components/ui";
+
 import InputField from "@/types/inputs";
 import useAuthGuard from "@/hooks/useAuthGuard";
 import { getDashboardRoute } from "@/utils/getDashboardRoute";
@@ -99,9 +104,12 @@ export default function ChangePasswordPage() {
           ))}
           {error && <p style={{ color: "red" }}>{error}</p>}
           {success && <p style={{ color: "green" }}>{success}</p>}        
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600" disabled={loading}>
-            {loading ? "" : "Change Password"}
-          </button>
+          <Button
+            type="submit"
+            loading={loading}
+          >
+            Change Password
+          </Button>
         </div>
       </form>
     </div>

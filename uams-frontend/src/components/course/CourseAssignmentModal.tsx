@@ -52,12 +52,14 @@ export default function CourseAssignmentModal({
   const [saving, setSaving] = useState(false);
   
   const { notify } = useNotification();
-
+  
   const filteredLecturers = useMemo(() => {
+    const keyword = search.toLowerCase();
+  
     return lecturers.filter((lecturer) =>
-      lecturer.lecturerName
+      `${lecturer.firstName} ${lecturer.lastName} ${lecturer.staffNumber}`
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes(keyword)
     );
   }, [lecturers, search]);
   
@@ -84,7 +86,7 @@ export default function CourseAssignmentModal({
           getAssignedLecturers(course._id),
         ]);
   
-        setLecturers(allLecturers);
+        setLecturers(allLecturers.data);
   
         setSelectedLecturerIds(
           assignedLecturers.map(
@@ -110,7 +112,7 @@ export default function CourseAssignmentModal({
     };
   
     loadData();
-  }, [open, course]);
+  }, [open, course, notify]);
 
   const handleSave = async () => {
     if (!course) return;
@@ -205,7 +207,7 @@ export default function CourseAssignmentModal({
                 <div>
   
                   <p className="font-medium">
-                    {lecturer.lecturerName}
+                    {lecturer.firstName} {lecturer.lastName}
                   </p>
   
                   <p className="text-sm text-muted-foreground">

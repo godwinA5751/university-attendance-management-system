@@ -21,13 +21,6 @@ router.get(
   getAllLecturersController
 );
 
-router.get(
-  "/:id",
-  verifyJWT,
-  authorize(["admin"]),
-  getLecturerController
-);
-
 router.post(
   "/",
   verifyJWT,
@@ -35,20 +28,8 @@ router.post(
   createLecturerController
 );
 
-router.patch(
-  "/:id",
-  verifyJWT,
-  authorize(["admin"]),
-  updateLecturerController
-);
-
-router.delete(
-  "/:id",
-  verifyJWT,
-  authorize(["admin"]),
-  deleteLecturerController
-);
-
+// Specific routes must be registered BEFORE "/:id" or Express will
+// treat "courses" / "attendance-report" / "profile" as the :id param.
 router.get(
   "/courses",
   verifyJWT,
@@ -68,6 +49,27 @@ router.get(
   verifyJWT,
   authorize(["lecturer"]),
   lecturerProfileController
+);
+
+router.get(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  getLecturerController
+);
+
+router.patch(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  updateLecturerController
+);
+
+router.delete(
+  "/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  deleteLecturerController
 );
 
 export default router;

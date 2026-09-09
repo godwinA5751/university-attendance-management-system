@@ -1,5 +1,42 @@
 import api from "@/lib/axios";
-import { Lecturer, CreateLecturerInput, UpdateLecturerInput, GetLecturersParams } from "@/types/lecturer";
+import {
+  Lecturer,
+  CreateLecturerInput,
+  UpdateLecturerInput,
+  GetLecturersParams,
+  LecturerCourse,
+  LecturerDashboardCourse,
+  LecturerProfile,
+} from "@/types/lecturer";
+
+// ---- Self-service endpoints (used by the logged-in lecturer) ----
+
+export const getMyCourses = async () => {
+  const response = await api.get<{
+    message: string;
+    data: LecturerCourse[];
+  }>("/lecturers/courses");
+
+  return response.data.data;
+};
+
+export const getMyDashboard = async () => {
+  const response = await api.get<{
+    message: string;
+    data: LecturerDashboardCourse[];
+  }>("/analytics/lecturer/dashboard");
+
+  return response.data.data;
+};
+
+export const getMyProfile = async () => {
+  const response = await api.get<{
+    message: string;
+    data: LecturerProfile;
+  }>("/lecturers/profile");
+
+  return response.data.data;
+};
 
 export const getLecturers = async (
   params?: GetLecturersParams

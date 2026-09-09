@@ -69,35 +69,46 @@ export const createAttendance = async (input: CreateAttendanceInput, lecturerId:
     throw new Error("Invalid attendance date");
   }
 
-  // 5. Prevent duplicates
-  const duplicate = await Attendance.findOne({
-    enrollmentId,
-    dateTime: attendanceDate,
-  });
-
-  if (duplicate) {
-    throw new Error("Attendance already recorded");
-  }
-
-  // 6. Create attendance
-  const attendance = new Attendance({
-    enrollmentId,
-    dateTime: attendanceDate,
-    status,
-  });
-
-  await attendance.save();
+  // 5. Upsert: if attendance was already recorded for this
+  // enrollment/date, correct its status instead of rejecting the
+  // request — this lets a lecturer fix a mis-tap on the same day.
+  const attendance = await Attendance.findOneAndUpdate(
+    {
+      enrollmentId,
+      dateTime: attendanceDate,
+    },
+    {
+      enrollmentId,
+      dateTime: attendanceDate,
+      status,
+    },
+    {
+      upsert: true,
+      new: true,
+    }
+  );
 
   return attendance;
 };
 
-export const getLecturerAttendanceReport = async (lecturerId: string) => {
-  // 1. Get lecturer courses
-  const courses = await Course.find({
-    lecturerIds: lecturerId,
-  });
+export const getLecturerAttendanceReport = async (userId: string) => {
+  const { Lecturer } = await import("../models/Lecturer.js");
+  const lecturer = await Lecturer.findOne({ userId });
 
-  const courseIds = courses.map((c) => c._id);
+  if (!lecturer) {
+    throw new Error("Lecturer not found");
+  }
+
+  // 1. Get lecturer courses via CourseAssignment
+  const assignments = await CourseAssignment.find({
+    lecturerId: lecturer._id,
+  }).populate("courseId");
+
+  const courses = assignments
+    .map((a: any) => a.courseId)
+    .filter(Boolean);
+
+  const courseIds = courses.map((c: any) => c._id);
 
   // 2. Get enrollments for these courses
   const enrollments = await CourseEnrollment.find({

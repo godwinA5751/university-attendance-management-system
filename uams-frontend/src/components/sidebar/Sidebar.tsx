@@ -16,9 +16,17 @@ import {
   UserCheck,
   ClipboardCheck,
   ChartColumn,
+  User,
+  LucideIcon,
 } from "lucide-react";
 
-const navigationItems = [
+export interface SidebarNavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+const adminNavigationItems: SidebarNavItem[] = [
   {
     label: "Dashboard",
     href: "/admin/dashboard",
@@ -61,8 +69,33 @@ const navigationItems = [
   },
 ];
 
-export default function Sidebar() {
+export const lecturerNavigationItems: SidebarNavItem[] = [
+  {
+    label: "Dashboard",
+    href: "/lecturer/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "My Courses",
+    href: "/lecturer/courses",
+    icon: BookOpen,
+  },
+  {
+    label: "Profile",
+    href: "/lecturer/profile",
+    icon: User,
+  },
+];
+
+interface SidebarProps {
+  items?: SidebarNavItem[];
+}
+
+export default function Sidebar({
+  items = adminNavigationItems,
+}: SidebarProps) {
   const pathname = usePathname();
+  const navigationItems = items;
 
   return (
     <aside

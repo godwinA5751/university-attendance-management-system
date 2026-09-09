@@ -1,5 +1,5 @@
 export default interface InputFields {
   label: string;
-  name: "email" | "password";
+  name: "user" | "password";
   type: string;
 };

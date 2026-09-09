@@ -1,9 +1,10 @@
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
-import { Course } from "../models/Course.js";
+// import { Course } from "../models/Course.js";
 import { Lecturer } from "../models/Lecturer.js";
 import { Student } from "../models/Student.js";
 import { AcademicSession } from "../models/AcademicSession.js";
+import { CourseAssignment } from "../models/CourseAssignment.js";
 
 export const getStudentAttendanceStats = async (
   studentId: string
@@ -139,12 +140,13 @@ export const getLecturerDashboard = async (userId: string) => {
     throw new Error("Lecturer not found");
   }
 
-  const courses = await Course.find({
-    lecturerIds: lecturer._id,
-  });
+  const assignments = await CourseAssignment.find({
+    lecturerId: lecturer._id,
+  }).populate("courseId");
 
-  console.log("User ID:", userId);
-  console.log("Lecturer ID:", lecturer._id);
+  const courses = assignments
+    .map((a: any) => a.courseId)
+    .filter(Boolean);
 
   const dashboard = await Promise.all(
     courses.map(async (course) => {
@@ -187,8 +189,6 @@ export const getLecturerDashboard = async (userId: string) => {
       };
     })
   );
-
-  console.log("Courses found:", courses.length);
 
   return dashboard;
 };

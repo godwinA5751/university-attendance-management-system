@@ -41,5 +41,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../uams-frontend/src/types/analytics.ts", "../uams-frontend/src/types/enrollment.ts"]
 }

@@ -61,7 +61,7 @@ export default function ChangePasswordPage() {
     }
     try {
       setLoading(true);
-      const response = await api.patch("api/auth/change-password", {
+      const response = await api.patch("auth/change-password", {
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
       });

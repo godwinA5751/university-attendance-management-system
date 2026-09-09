@@ -9,9 +9,24 @@ import { authorize } from "../middleware/authorize.js";
 
 const router = express.Router();
 
-router.get("/student/:id", getStudentAttendanceController);
-router.get("/course/:id", getCourseAttendanceController);
-router.get("/enrollment/:id", getEnrollmentAttendanceController);
+router.get(
+  "/student/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  getStudentAttendanceController
+);
+router.get(
+  "/course/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  getCourseAttendanceController
+);
+router.get(
+  "/enrollment/:id",
+  verifyJWT,
+  authorize(["admin"]),
+  getEnrollmentAttendanceController
+);
 router.post(
   "/",
   verifyJWT,

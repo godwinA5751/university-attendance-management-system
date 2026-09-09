@@ -2,7 +2,8 @@ import type { CreateLecturerInput, UpdateLecturerInput } from "../types/lecturer
 import { User } from "../models/User.js";
 import { Lecturer } from "../models/Lecturer.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
-import { Course } from "../models/Course.js";
+// import { Course } from "../models/Course.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 
 
 export const createLecturer = async (data: CreateLecturerInput) => {
@@ -44,12 +45,29 @@ export const createLecturer = async (data: CreateLecturerInput) => {
     };
 }
 
-export const getLecturerCourses = async (lecturerId: string) => {
-  const courses = await Course.find({
-    lecturerIds: lecturerId,
+export const getLecturerCourses = async (userId: string) => {
+  const lecturer = await Lecturer.findOne({ userId });
+
+  if (!lecturer) {
+    throw new Error("Lecturer not found");
+  }
+
+  const activeSession = await AcademicSession.findOne({
+    isActive: true,
   });
 
-  return courses;
+  if (!activeSession) {
+    throw new Error("No active academic session found");
+  }
+
+  const assignments = await CourseAssignment.find({
+    lecturerId: lecturer._id,
+    academicSessionId: activeSession._id,
+  }).populate("courseId");
+
+  return assignments
+    .filter((a: any) => a.courseId)
+    .map((a: any) => a.courseId);
 };
 
 export const getLecturerProfile = async (

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { getStudentAttendanceStats, getCourseAttendanceStats, getDashboardStats, getLecturerDashboard } from "../services/attendanceAnalytics.js";
 import { Course } from "../models/Course.js";
 import { getLecturerFromUserId } from "../utils/getLecturerFromId.js";
+import { CourseAssignment } from "../models/CourseAssignment.js";
 import { Student } from "../models/Student.js";
 
 export const studentAnalyticsController = async (
@@ -58,9 +59,9 @@ export const courseAnalyticsController = async (
     if (req.user!.role === "lecturer") {
       const lecturer = await getLecturerFromUserId(req.user!.id);
     
-      const isAssigned = await Course.exists({
-        _id: courseId,
-        lecturerIds: lecturer._id,
+      const isAssigned = await CourseAssignment.exists({
+        courseId,
+        lecturerId: lecturer._id,
       });
     
       if (!isAssigned) {

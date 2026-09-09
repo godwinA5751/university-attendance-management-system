@@ -15,6 +15,14 @@ export const getLecturerCoursesController = async (
       data: courses,
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === "Lecturer not found" ||
+        error.message === "No active academic session found")
+    ) {
+      return res.status(404).json({ message: error.message });
+    }
+
     return res.status(500).json({
       message: error instanceof Error ? error.message : "Server error",
     });

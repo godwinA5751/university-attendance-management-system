@@ -1,6 +1,62 @@
 import type { Request, Response } from "express";
-import { createCourseEnrollment } from "../services/courseEnrollmentService.js";
+import { createCourseEnrollment, getEnrollmentsForCourse } from "../services/courseEnrollmentService.js";
 import { getAttendanceByEnrollment } from "../services/attendanceService.js";
+import { Lecturer } from "../models/Lecturer.js";
+import { CourseAssignment } from "../models/CourseAssignment.js";
+
+export const getCourseEnrollmentsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const courseId = req.params.courseId as string;
+    const { date } = req.query;
+
+    if (req.user!.role === "lecturer") {
+      const lecturer = await Lecturer.findOne({
+        userId: req.user!.id,
+      });
+
+      if (!lecturer) {
+        return res.status(404).json({
+          message: "Lecturer not found",
+        });
+      }
+
+      const isAssigned = await CourseAssignment.exists({
+        courseId,
+        lecturerId: lecturer._id,
+      });
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          message: "Not authorized for this course",
+        });
+      }
+    }
+
+    const students = await getEnrollmentsForCourse(
+      courseId,
+      date as string | undefined
+    );
+
+    return res.status(200).json({
+      message: "Enrolled students fetched successfully",
+      data: students,
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Course not found"
+    ) {
+      return res.status(404).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error instanceof Error ? error.message : "Server error",
+    });
+  }
+};
 
 export const getEnrollmentAttendanceController = async (
   req: Request,

@@ -9,9 +9,9 @@ import { getDashboardRoute } from "@/utils/getDashboardRoute";
 
 const inputs: InputFields[] = [
   {
-    label: "Email",
-    name: "email",
-    type: "email",
+    label: "Staff/Student ID",
+    name: "user",
+    type: "text",
   },
   {
     label: "Password",
@@ -22,7 +22,7 @@ const inputs: InputFields[] = [
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: "",
+    user: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.email.trim() || !formData.password.trim()) {
+    if (!formData.user.trim() || !formData.password.trim()) {
       setError("Please fill in required field");
       setTimeout(() => setError(""), 3000);
       return;
@@ -43,7 +43,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const response = await api.post("/auth/login", {
-        identifier: formData.email,
+        identifier: formData.user,
         password: formData.password,
       });
 

@@ -55,7 +55,6 @@ export const createAttendance = async (input: CreateAttendanceInput, lecturerId:
   const assignment = await CourseAssignment.findOne({
     courseId: enrollment.courseId,
     lecturerId,
-    academicSessionId: enrollment.academicSessionId,
   });
   
   if (!assignment) {

@@ -35,6 +35,12 @@ const studentSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+
+    curriculumId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Curriculum",
+      required: true,
+    }
   },
   {
     timestamps: true,

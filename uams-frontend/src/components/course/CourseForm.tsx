@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Button, Input, Select, FormSection, FormGrid, FormActions } from "@/components/ui";
 
-import { AcademicSession } from "@/types/academicSession";
+import { Curriculum } from "@/types/curriculum";
 
 interface CourseFormData {
   courseCode: string;
@@ -12,19 +12,19 @@ interface CourseFormData {
   unit: number;
   level: number;
   semester: "First" | "Second";
-  academicSessionId: string;
+  curriculumId: string;
 }
 
 interface CourseFormProps {
   loading?: boolean;
-  sessions: AcademicSession[];
+  curriculum: Curriculum[];
   initialValues?: Partial<CourseFormData>;
   onSubmit: (data: CourseFormData) => void;
 }
 
 export default function CourseForm({
   loading = false,
-  sessions,
+  curriculum,
   initialValues,
   onSubmit,
 }: CourseFormProps) {
@@ -34,8 +34,8 @@ export default function CourseForm({
     unit: initialValues?.unit ?? 1,
     level: initialValues?.level ?? 100,
     semester: initialValues?.semester ?? "First",
-    academicSessionId:
-      initialValues?.academicSessionId ?? "",
+    curriculumId:
+      initialValues?.curriculumId ?? "",
   });
 
   const handleChange = (
@@ -145,26 +145,26 @@ export default function CourseForm({
         </Select>
   
         <Select
-          label="Academic Session"
-          value={formData.academicSessionId}
+          label="Curriculum"
+          value={formData.curriculumId}
           onChange={(e) =>
             handleChange(
-              "academicSessionId",
+              "curriculumId",
               e.target.value
             )
           }
           required
         >
           <option value="">
-            Select Academic Session
+            Select Curriculum
           </option>
   
-          {sessions.map((session) => (
+          {curriculum.map((cur) => (
             <option
-              key={session._id}
-              value={session._id}
+              key={cur._id}
+              value={cur._id}
             >
-              {session.sessionName}
+              {cur.curriculumName}
             </option>
           ))}
         </Select>

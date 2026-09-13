@@ -43,7 +43,7 @@ export default function CourseCard({
         </div>
 
         <Badge variant="success">
-          {course.academicSessionId.sessionName}
+          {course.curriculumId.curriculumName}
         </Badge>
 
       </div>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 
 import { Plus } from "lucide-react"
 
@@ -22,7 +21,7 @@ import {
   promoteStudent,
 } from "@/services/studentService";
 
-import { getAcademicSessions } from "@/services/academicSessionService";
+import { getCurriculum } from "@/services/curriculumService";
 import { getCourses } from "@/services/courseService";
 
 import StudentFilter from "@/components/student/StudentFilters";
@@ -31,15 +30,14 @@ import StudentPromotionModal from "@/components/student/StudentPromotionModal";
 import StudentTable from "@/components/student/StudentTable";
 
 import { Student } from "@/types/student";
-import { AcademicSession } from "@/types/academicSession";
+import { Curriculum } from "@/types/curriculum";
 import { Course } from "@/types/course";
 import { CreateStudentInput } from "@/types/student";
 
 
 export default function StudentsPage() {
-  const navigate = useRouter
   const [students, setStudents] = useState<Student[]>([]);
-  const [sessions, setSessions] = useState<AcademicSession[]>([]);
+  const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [carryoverCourses, setCarryoverCourses] =
     useState<Course[]>([]);
@@ -53,7 +51,7 @@ export default function StudentsPage() {
   
   const [level, setLevel] = useState<number>();
   
-  const [academicSessionId, setAcademicSessionId] =
+  const [curriculumId, setCurriculumId] =
     useState<string>();
   
   const [page, setPage] = useState(1);
@@ -90,7 +88,7 @@ export default function StudentsPage() {
         limit: 10,
         search,
         level,
-        academicSessionId,
+        curriculumId,
       });
   
       setStudents(res.data);
@@ -111,21 +109,21 @@ export default function StudentsPage() {
     page,
     search,
     level,
-    academicSessionId,
+    curriculumId,
     notify
   ]);
   
-  const fetchSessions = useCallback(async () => {
+  const fetchCurriculums = useCallback(async () => {
     try {
-      const academicSession = await getAcademicSessions();
+      const curriculum = await getCurriculum();
   
-      setSessions(academicSession);
+      setCurriculums(curriculum);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         notify(
           "error",
           error?.response?.data?.message ??
-            "Failed to fetch academic sessions"
+            "Failed to fetch curriculums"
         );
         return;
       }
@@ -151,12 +149,22 @@ export default function StudentsPage() {
     }
   }, [notify]);
 
-  const fetchCarryoverCourses = async (level: number) => {
+  const fetchCarryoverCourses = async (
+    level: number,
+    curriculumId: string
+  ) => {
+    if (!curriculumId) {
+      setCarryoverCourses([]);
+      return;
+    }
+
     try {
       const res = await getCourses({
         maxLevel: level,
+        curriculumId,
         limit: 1000,
       });
+
       setCarryoverCourses(res.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -165,10 +173,9 @@ export default function StudentsPage() {
           error?.response?.data?.message ??
             "Failed to fetch carryover courses"
         );
-        return;
+      }
     }
-    };
-  }
+  };
   
   useEffect(() => {
     setTimeout(() => {
@@ -178,13 +185,13 @@ export default function StudentsPage() {
   
   useEffect(() => {
     setTimeout(() => {
-      fetchSessions();
+      fetchCurriculums();
     }, 0);
     setTimeout(() => {
       fetchCourses();
     }, 0);
   }, [
-    fetchSessions,
+    fetchCurriculums,
     fetchCourses,
   ]);
 
@@ -338,7 +345,7 @@ export default function StudentsPage() {
     try {
       const res = await getCourses({
         maxLevel: nextLevel,
-        academicSessionId,
+        curriculumId: student.curriculumId,
         limit: 1000,
       });
     
@@ -361,7 +368,7 @@ export default function StudentsPage() {
   };
   
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Students"
         subtitle="Manage students and promotions."
@@ -375,12 +382,12 @@ export default function StudentsPage() {
         }
       />
 
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-25">
         <StudentFilter
           search={search}
           level={level}
-          academicSessionId={academicSessionId}
-          sessions={sessions}
+          curriculumId={curriculumId}
+          curriculum={curriculums}
           onSearchChange={(value) => {
             setSearch(value);
             setPage(1);
@@ -389,8 +396,8 @@ export default function StudentsPage() {
             setLevel(value);
             setPage(1);
           }}
-          onAcademicSessionChange={(value) => {
-            setAcademicSessionId(value);
+          onCurriculumChange={(value) => {
+            setCurriculumId(value);
             setPage(1);
           }}
         />
@@ -428,7 +435,8 @@ export default function StudentsPage() {
           <StudentForm
             loading={submitting}
             carryoverCourses={carryoverCourses}
-            onLevelChange={fetchCarryoverCourses}
+            onCarryoverCoursesChange={fetchCarryoverCourses}
+            curriculums={curriculums}
             initialValues={editingStudent ?? undefined}
             onSubmit={handleSubmitStudent}
           />

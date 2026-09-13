@@ -55,7 +55,7 @@ export default function Button({
       "bg-yellow-500 hover:bg-yellow-600 text-white",
 
     logout:
-      "bg-transparent lg:border border-white/20 lg:justify-start lg:gap-2 text-white transition-all duration-10",
+      "bg-transparent lg:border-0 border-white/20 lg:justify-start lg:gap-2 text-white lg:px-0 lg:pt-5 lg:pb-0 lg:rounded-none",
 
     outline: `
       border

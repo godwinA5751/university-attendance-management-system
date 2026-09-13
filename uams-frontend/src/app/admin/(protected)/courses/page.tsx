@@ -8,7 +8,7 @@ import axios from "axios";
 import { Plus } from "lucide-react";
 
 import { Course } from "@/types/course";
-import { AcademicSession } from "@/types/academicSession";
+import { Curriculum } from "@/types/curriculum";
 
 import {
   getCourses,
@@ -19,7 +19,7 @@ import {
 
 import { useNotification } from "@/context/NotificationContext";
 
-import { getAcademicSessions } from "@/services/academicSessionService";
+import { getCurriculum } from "@/services/curriculumService";
 
 import CourseAssignmentModal from "@/components/course/CourseAssignmentModal";
 import CourseCard from "@/components/course/CourseCard";
@@ -40,7 +40,7 @@ import { CreateCourseInput } from "@/types/course";
 export default function CoursesPage() {
   const navigate = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
-  const [sessions, setSessions] = useState<AcademicSession[]>([]);
+  const [curriculum, setCurriculum] = useState<Curriculum[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +58,7 @@ export default function CoursesPage() {
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState("");
   const [semester, setSemester] = useState("");
-  const [academicSessionId, setAcademicSessionId] =
+  const [curriculumId, setCurriculumId] =
     useState("");
   const [editingCourse, setEditingCourse] =
     useState<Course | null>(null);
@@ -83,8 +83,8 @@ export default function CoursesPage() {
         search,
         level: level ? Number(level) : undefined,
         semester: semester as "First" | "Second" | undefined,
-        academicSessionId:
-          academicSessionId || undefined,
+        curriculumId:
+          curriculumId || undefined,
       });
   
       setCourses(response.data);
@@ -114,32 +114,32 @@ export default function CoursesPage() {
     search,
     level,
     semester,
-    academicSessionId,
+    curriculumId,
     notify,
     navigate
   ]);
 
-  const fetchSessions = useCallback(async () => {
+  const fetchCurriculum = useCallback(async () => {
     try {
-      const sessions =
-        await getAcademicSessions();
+      const curriculum =
+        await getCurriculum();
   
-      setSessions(sessions);
+      setCurriculum(curriculum);
     } catch {
       notify(
         "error",
-        "Failed to fetch academic sessions."
+        "Failed to fetch curriculum."
       );
     }
   }, [notify]);
 
   useEffect(() => {
-    const loadSessions = async () => {
-      await fetchSessions();
+    const loadCurriculum = async () => {
+      await fetchCurriculum();
     };
   
-    loadSessions();
-  }, [fetchSessions]);
+    loadCurriculum();
+  }, [fetchCurriculum]);
   
   useEffect(() => {
     const loadCourses = async () => {
@@ -263,12 +263,12 @@ export default function CoursesPage() {
     setSearch("");
     setLevel("");
     setSemester("");
-    setAcademicSessionId("");
+    setCurriculumId("");
     setPage(1);
   };
   
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Courses"
         subtitle="Manage all courses."
@@ -284,13 +284,13 @@ export default function CoursesPage() {
           </Button>
         }
       />
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-30">
         <CourseFilters
           search={search}
           level={level}
           semester={semester}
-          academicSessionId={academicSessionId}
-          sessions={sessions}
+          curriculumId={curriculumId}
+          curriculum={curriculum}
           onSearchChange={setSearch}
           onLevelChange={(value) => {
             setLevel(value);
@@ -300,8 +300,8 @@ export default function CoursesPage() {
             setSemester(value);
             setPage(1);
           }}
-          onSessionChange={(value) => {
-            setAcademicSessionId(value);
+          onCurriculumChange={(value) => {
+            setCurriculumId(value);
             setPage(1);
           }}
           onReset={handleResetFilters}
@@ -368,7 +368,7 @@ export default function CoursesPage() {
         >
           <CourseForm
               loading={saving}
-              sessions={sessions}
+              curriculum={curriculum}
               initialValues={
                   editingCourse
                       ? {
@@ -380,9 +380,9 @@ export default function CoursesPage() {
                           level: editingCourse.level,
                           semester:
                             editingCourse.semester,
-                          academicSessionId:
+                          curriculumId:
                             editingCourse
-                              .academicSessionId._id,
+                              .curriculumId._id,
                         }
                       : undefined
               }

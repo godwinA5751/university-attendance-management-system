@@ -79,12 +79,12 @@ export default function DashboardPage() {
   }, [navigate, notify]);
 
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Dashboard"
         subtitle="Summary of all activities in the system"
       />
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-30">
         {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {CARD_CONFIG.map((_, index) => (

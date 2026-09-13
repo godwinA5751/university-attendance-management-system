@@ -1,28 +1,28 @@
 "use client";
 
 import { Input, Select } from "@/components/ui";
-import { AcademicSession } from "@/types/academicSession";
+import { Curriculum } from "@/types/curriculum";
 
 interface StudentFilterProps {
   search: string;
   level?: number;
-  academicSessionId?: string;
+  curriculumId?: string;
 
-  sessions: AcademicSession[];
+  curriculum: Curriculum[];
 
   onSearchChange: (value: string) => void;
   onLevelChange: (level?: number) => void;
-  onAcademicSessionChange: (sessionId?: string) => void;
+  onCurriculumChange: (curriculumId?: string) => void;
 }
 
 export default function StudentFilter({
   search,
   level,
-  academicSessionId,
-  sessions,
+  curriculumId,
+  curriculum,
   onSearchChange,
   onLevelChange,
-  onAcademicSessionChange,
+  onCurriculumChange,
 }: StudentFilterProps) {
   return (
     <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
@@ -64,24 +64,24 @@ export default function StudentFilter({
         </Select>
 
         <Select
-          label="Academic Session"
-          value={academicSessionId ?? ""}
+          label="Curriculum"
+          value={curriculumId ?? ""}
           onChange={(e) =>
-            onAcademicSessionChange(
+            onCurriculumChange(
               e.target.value || undefined
             )
           }
         >
           <option value="">
-            All Sessions
+            All Curriculum
           </option>
 
-          {sessions.map((session) => (
+          {curriculum.map((curr) => (
             <option
-              key={session._id}
-              value={session._id}
+              key={curr._id}
+              value={curr._id}
             >
-              {session.sessionName}
+              {curr.curriculumName}
             </option>
           ))}
         </Select>

@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!courseId) {
-      (() => setCourseStats(null))();
+      setTimeout(() => setCourseStats(null), 0);
       return;
     }
 
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!studentId) {
-      (() => setStudentStats(null))();
+      setTimeout(() => setStudentStats(null), 0);
       return;
     }
 
@@ -108,13 +108,13 @@ export default function AnalyticsPage() {
   }, [studentId, notify]);
 
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Analytics"
         subtitle="Drill into attendance performance by course or by student"
       />
 
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19 space-y-6">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-25 space-y-6">
         {/* Course analytics */}
         <Card>
           <div className="flex items-center gap-2 mb-4">
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
               {courses.map((course) => (
                 <option key={course._id} value={course._id}>
                   {course.courseCode} — {course.courseTitle} (
-                  {course.academicSessionId.sessionName})
+                  {course.curriculumId?.curriculumName})
                 </option>
               ))}
             </Select>

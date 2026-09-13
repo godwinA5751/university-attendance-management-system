@@ -93,9 +93,13 @@ export default function EnrollmentsPage() {
 
   useEffect(() => {
     if (courseId) {
-      (() => fetchEnrolled(courseId))();
+      setTimeout(() => {
+        fetchEnrolled(courseId);
+      }, 0);
     } else {
-      (() => setEnrolled(null))();
+      setTimeout(() => {
+        setEnrolled(null);
+      }, 0);
     }
   }, [courseId, fetchEnrolled]);
 
@@ -113,7 +117,6 @@ export default function EnrollmentsPage() {
       await createEnrollment({
         studentId,
         courseId: selectedCourse._id,
-        academicSessionId: selectedCourse.academicSessionId._id,
       });
 
       notify("success", "Student enrolled successfully");
@@ -132,13 +135,13 @@ export default function EnrollmentsPage() {
   };
 
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Manual Enrollment"
         subtitle="Enroll a student into a course — for borrowed courses, carryovers, or corrections. Standard enrollment happens automatically on student creation and promotion."
       />
 
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19 space-y-6">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-50 md:mt-30 space-y-6">
         <Card className="max-w-2xl">
           {loadingOptions ? (
             <Skeleton className="h-40 rounded-xl" />
@@ -172,16 +175,16 @@ export default function EnrollmentsPage() {
                 {courses.map((course) => (
                   <option key={course._id} value={course._id}>
                     {course.courseCode} — {course.courseTitle} (Level{" "}
-                    {course.level}, {course.academicSessionId.sessionName})
+                    {course.level}, {course.curriculumId?.curriculumName})
                   </option>
                 ))}
               </Select>
 
               {selectedCourse && (
                 <p className="md:col-span-2 text-sm text-gray-500">
-                  Academic session:{" "}
+                  Curriculum:{" "}
                   <span className="font-medium text-gray-700">
-                    {selectedCourse.academicSessionId.sessionName}
+                    {selectedCourse.curriculumId?.curriculumName}
                   </span>{" "}
                   — derived from the selected course.
                 </p>

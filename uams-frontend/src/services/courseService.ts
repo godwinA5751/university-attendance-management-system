@@ -11,7 +11,7 @@ type GetCoursesParams = {
   search?: string;
   level?: number;
   semester?: string;
-  academicSessionId?: string;
+  curriculumId?: string;
   maxLevel?: number;
 };
 

@@ -143,7 +143,7 @@ export default function StudentTable({
                   </td>
 
                   <td className="p-4 font-medium">
-                    {student.firstName} {student.lastName}
+                    {student.firstName} {student.middleName ?? ""} {student.lastName}
                   </td>
 
                   <td className="p-4 text-sm">

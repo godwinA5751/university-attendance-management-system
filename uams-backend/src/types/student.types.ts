@@ -1,5 +1,6 @@
 export interface CreateStudentInput {
   firstName: string;
+  middleName?: string;
   lastName: string;
   matricNumber: string;
   department: string;
@@ -7,4 +8,5 @@ export interface CreateStudentInput {
   currentLevel: number;
   admissionYear: number;
   carryOverCourseIds?: string[];
+  curriculumId: string;
 }

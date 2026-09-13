@@ -18,6 +18,7 @@ import {
   ChartColumn,
   User,
   LucideIcon,
+  Book,
 } from "lucide-react";
 
 export interface SidebarNavItem {
@@ -31,6 +32,11 @@ const adminNavigationItems: SidebarNavItem[] = [
     label: "Dashboard",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Curriculum",
+    href: "/admin/curriculum",
+    icon: Book,
   },
   {
     label: "Academic Sessions",
@@ -108,7 +114,7 @@ export default function Sidebar({
         from-[#2563EB]
         via-[#1D4ED8]
         to-[#172554]
-        rounded-r-[36px]
+        rounded-r-[30px]
         overflow-hidden
         text-white
       "

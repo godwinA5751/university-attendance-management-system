@@ -7,7 +7,7 @@ import { AcademicSession } from "../models/AcademicSession.js";
 
 
 export const createLecturer = async (data: CreateLecturerInput) => {
-  const { firstName, lastName, staffNumber, department, faculty } = data;
+  const { firstName, middleName, lastName, staffNumber, department, faculty } = data;
 
   const existingLecturer = await Lecturer.findOne({ staffNumber });
   if (existingLecturer) {
@@ -21,6 +21,7 @@ export const createLecturer = async (data: CreateLecturerInput) => {
   const user = new User(
     {
       firstName,
+      middleName,
       lastName,
       password: process.env.DEFAULT_PASSWORD,
       role: "lecturer",
@@ -106,7 +107,7 @@ export const getAllLecturers = async ({
 }: GetLecturersInput)=> {
   let lecturers = await Lecturer.find().populate({
     path: "userId",
-    select: "firstName lastName",
+    select: "firstName middleName lastName",
   })
     .sort({ createdAt: -1 });
 
@@ -117,7 +118,7 @@ export const getAllLecturers = async ({
         const user = lecturer.userId;
   
         return (
-          `${user.firstName} ${user.lastName}`
+          `${user.firstName} ${user.middleName || ''} ${user.lastName}`
             .toLowerCase()
             .includes(keyword) ||
           lecturer.staffNumber
@@ -137,6 +138,7 @@ export const getAllLecturers = async ({
     data: paginatedLecturers.map((lecturer: any) => ({
       _id: lecturer._id,
       firstName: lecturer.userId.firstName,
+      middleName: lecturer.userId.middleName,
       lastName: lecturer.userId.lastName,
       staffNumber: lecturer.staffNumber,
       department: lecturer.department,
@@ -157,7 +159,7 @@ export const getLecturerById = async (
   const lecturer = await Lecturer.findById(id)
     .populate({
       path: "userId",
-      select: "firstName lastName",
+      select: "firstName middleName lastName",
     });
 
   if (!lecturer) {
@@ -169,6 +171,7 @@ export const getLecturerById = async (
   return {
     _id: lecturer._id,
     firstName: user.firstName,
+    middleName: user.middleName,
     lastName: user.lastName,
     staffNumber: lecturer.staffNumber,
     department: lecturer.department,
@@ -192,21 +195,36 @@ export const updateLecturer = async (
     throw new Error("User not found");
   }
 
-  user.firstName = data.firstName;
-  user.lastName = data.lastName;
+  if (data.firstName !== undefined) {
+    user.firstName = data.firstName;
+  }
+
+  if (data.middleName !== undefined) {
+    user.middleName = data.middleName;
+  }
+
+  if (data.lastName !== undefined) {
+    user.lastName = data.lastName;
+  }
 
   await user.save();
 
-  lecturer.department = data.department;
-  lecturer.faculty = data.faculty;
+  if (data.department !== undefined) {
+    lecturer.department = data.department;
+  }
+
+  if (data.faculty !== undefined) {
+    lecturer.faculty = data.faculty;
+  }
 
   await lecturer.save();
 
-  return {
-    user,
-    lecturer,
-    lecturerName: `${user.firstName} ${user.lastName}`,
-  };
+  return lecturer
+    .populate({
+      path: "userId",
+      select:
+      "firstName middleName lastName",
+    });
 };
 
 export const deleteLecturer = async (

@@ -22,7 +22,7 @@ type GetStudentsParams = {
   limit?: number;
   search?: string;
   level?: number;
-  academicSessionId?: string;
+  curriculumId?: string;
 };
 
 export const getStudents = async (

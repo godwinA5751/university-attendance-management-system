@@ -32,9 +32,9 @@ const courseSchema = new mongoose.Schema(
       required: true,
     },
     
-    academicSessionId: {
+    curriculumId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "AcademicSession",
+      ref: "Curriculum",
       required: true,
     },
   },
@@ -46,7 +46,7 @@ const courseSchema = new mongoose.Schema(
 courseSchema.index(
   {
     courseCode: 1,
-    academicSessionId: 1,
+    curriculumId: 1,
   },
   {
     unique: true,

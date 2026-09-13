@@ -10,14 +10,20 @@ import {
 } from "@/components/ui";
 
 import { Course } from "@/types/course";
+import { Curriculum } from "@/types/curriculum";
 import { CreateStudentInput } from "@/types/student";
 
 interface StudentFormProps {
   loading?: boolean;
   
   carryoverCourses: Course[];
+
+  curriculums: Curriculum[];
   
-  onLevelChange?: (level: number) => void;
+  onCarryoverCoursesChange?: (
+    level: number,
+    curriculumId: string
+  ) => void;
 
   initialValues?: Partial<CreateStudentInput>;
 
@@ -29,7 +35,8 @@ interface StudentFormProps {
 export default function StudentForm({
   loading = false,
   carryoverCourses,
-  onLevelChange,
+  curriculums,
+  onCarryoverCoursesChange,
   initialValues,
   onSubmit,
 }: StudentFormProps) {
@@ -37,6 +44,9 @@ export default function StudentForm({
     useState<CreateStudentInput>({
       firstName:
         initialValues?.firstName ?? "",
+
+      middleName:
+        initialValues?.middleName ?? "",
 
       lastName:
         initialValues?.lastName ?? "",
@@ -56,6 +66,9 @@ export default function StudentForm({
       admissionYear:
         initialValues?.admissionYear ??
         new Date().getFullYear(),
+
+      curriculumId:
+        initialValues?.curriculumId ?? "",
 
       carryOverCourseIds:
         initialValues?.carryOverCourseIds ??
@@ -97,6 +110,17 @@ export default function StudentForm({
             )
           }
           required
+        />
+
+        <Input
+          label="Middle Name"
+          value={formData.middleName ?? ""}
+          onChange={(e) =>
+            handleChange(
+              "middleName",
+              e.target.value
+            )
+          }
         />
 
         <Input
@@ -170,7 +194,7 @@ export default function StudentForm({
         
             handleChange("currentLevel", level);
         
-            onLevelChange?.(level);
+            onCarryoverCoursesChange?.(level, formData.curriculumId);
           }}
         >
           {[100, 200, 300, 400, 500, 600].map(
@@ -183,6 +207,31 @@ export default function StudentForm({
               </option>
             )
           )}
+        </Select>
+
+        <Select
+          label="Curriculum"
+          value={formData.curriculumId}
+          onChange={(e) =>
+            handleChange(
+              "curriculumId",
+              e.target.value
+            )
+          }
+          required
+        >
+          <option value="">
+            Select Curriculum
+          </option>
+
+          {curriculums.map((curriculum) => (
+            <option
+              key={curriculum._id}
+              value={curriculum._id}
+            >
+              {curriculum.curriculumName}
+            </option>
+          ))}
         </Select>
 
         <MultiSelect

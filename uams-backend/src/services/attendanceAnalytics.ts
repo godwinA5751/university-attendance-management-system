@@ -108,7 +108,7 @@ export const getDashboardStats = async () => {
   endOfDay.setHours(23, 59, 59, 999);
 
   // Filter attendance to today only
-  const todayFilter = { date: { $gte: startOfDay, $lte: endOfDay } }; // replace "date" with your actual field name
+  const todayFilter = { dateTime: { $gte: startOfDay, $lte: endOfDay } }; 
 
   const totalAttendance = await Attendance.countDocuments(todayFilter);
   const present = await Attendance.countDocuments({
@@ -182,6 +182,7 @@ export const getLecturerDashboard = async (userId: string) => {
 
       return {
         courseId: course._id,
+        courseCode: course.courseCode,
         courseTitle: course.courseTitle,
         totalStudents: enrollments.length,
         totalAttendanceRecords,

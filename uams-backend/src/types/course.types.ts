@@ -4,7 +4,7 @@ export interface CreateCourseInput{
   unit: number
   semester: "First" | "Second"
   level: 100 | 200 | 300 | 400 | 500 | 600 | 700;
-  academicSessionId: string
+  curriculumId: string;
 }
 
 export interface UpdateCourseInput {
@@ -14,7 +14,7 @@ export interface UpdateCourseInput {
   unit: number;
   semester: "First" | "Second";
   level: 100 | 200 | 300 | 400 | 500 | 600;
-  academicSessionId: string;
+  curriculumId: string;
 }
 
 export interface GetCoursesQuery {
@@ -23,5 +23,5 @@ export interface GetCoursesQuery {
   search?: string;
   level?: number;
   semester?: "First" | "Second";
-  academicSessionId?: string;
+  curriculumId?: string;
 }

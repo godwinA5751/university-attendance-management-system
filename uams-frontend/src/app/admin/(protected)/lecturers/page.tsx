@@ -196,7 +196,7 @@ export default function LecturersPage() {
   };
   
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Lecturers"
         subtitle="Manage lecturers."
@@ -210,7 +210,7 @@ export default function LecturersPage() {
         }
       />
 
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-25">
         <LecturerFilter
           search={search}
           onSearchChange={(value) => {

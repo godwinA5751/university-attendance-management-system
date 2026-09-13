@@ -10,6 +10,7 @@ import enrollmentRoutes from "./routes/courseEnrollmentRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import courseAssignmentRoutes from "./routes/courseAssignmentRoutes.js";
+import curriculumRoutes from "./routes/curriculumRoutes.js";
 
 const app = express();
 
@@ -30,6 +31,6 @@ app.use("/enrollments", enrollmentRoutes);
 app.use("/attendance", attendanceRoutes);
 app.use("/course-assignments", courseAssignmentRoutes);
 app.use("/analytics", analyticsRoutes);
-
+app.use("/curricula", curriculumRoutes);
 
 export default app;

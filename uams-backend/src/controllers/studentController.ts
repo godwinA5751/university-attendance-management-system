@@ -31,6 +31,7 @@ export const createStudentController = async (req: Request, res: Response) => {
         user: {
           id: user._id,
           firstName: user.firstName,
+          middleName: user.middleName,
           lastName: user.lastName,
           role: user.role,
         },
@@ -101,9 +102,9 @@ export const getStudentsController = async (
         ? Number(req.query.level)
         : Number(req.query.level)
 
-    const academicSessionId =
-      typeof req.query.academicSessionId === "string"
-        ? req.query.academicSessionId
+    const curriculumId =
+      typeof req.query.curriculumId === "string"
+        ? req.query.curriculumId
         : "";
 
     const students = await getStudents({
@@ -111,7 +112,7 @@ export const getStudentsController = async (
       limit,
       search,
       level,
-      academicSessionId,
+      curriculumId,
     });
 
     return res.status(200).json(students);

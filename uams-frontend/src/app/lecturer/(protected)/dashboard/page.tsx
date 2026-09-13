@@ -80,8 +80,10 @@ export default function LecturerDashboardPage() {
             {courses.map((course) => (
               <Card key={course.courseId}>
                 <h2 className="text-lg font-bold text-blue-700">
-                  {course.courseTitle}
+                  {course.courseCode}
                 </h2>
+
+                <p className="text-gray-700 mt-1">{course.courseTitle}</p>
 
                 <div className="mt-4 space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">

@@ -9,6 +9,7 @@ export interface AssignLecturer {
 export interface Lecturer {
   _id: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
   staffNumber: string;
   department: string;
@@ -17,6 +18,7 @@ export interface Lecturer {
 
 export type CreateLecturerInput = {
   firstName: string;
+  middleName?: string;
   lastName: string;
   staffNumber: string;
   department: string;
@@ -25,6 +27,7 @@ export type CreateLecturerInput = {
 
 export type UpdateLecturerInput = {
   firstName: string;
+  middleName?: string;
   lastName: string;
   department: string;
   faculty: string;
@@ -52,6 +55,7 @@ export interface LecturerDashboardStudent {
 
 export interface LecturerDashboardCourse {
   courseId: string;
+  courseCode: string;
   courseTitle: string;
   totalStudents: number;
   totalAttendanceRecords: number;
@@ -60,6 +64,7 @@ export interface LecturerDashboardCourse {
 
 export interface LecturerProfile {
   firstName: string;
+  middleName?: string;
   lastName: string;
   staffNumber: string;
   department: string;

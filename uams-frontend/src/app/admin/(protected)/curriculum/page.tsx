@@ -6,20 +6,20 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 
 import {
-  AcademicSession,
-  CreateAcademicSessionInput,
-} from "@/types/academicSession";
+  Curriculum,
+  CreateCurriculumInput,
+} from "@/types/curriculum";
 
 import {
-  getAcademicSessions,
-  createAcademicSession,
-  activateAcademicSession,
-  deleteAcademicSession,
-} from "@/services/academicSessionService";
+  getCurriculum,
+  createCurriculum,
+  updateCurriculum,
+  deleteCurriculum,
+} from "@/services/curriculumService";
 
-import AcademicSessionCard from "@/components/academic-session/AcademicSessionCard";
-import AcademicSessionForm from "@/components/academic-session/AcademicSessionForm";
-import AcademicSessionSkeleton from "@/components/academic-session/AcademicSessionSkeleton";
+import CurriculumCard from "@/components/curriculum/CurriculumCard";
+import CurriculumForm from "@/components/curriculum/CurriculumForm";
+import CurriculumSkeleton from "@/components/curriculum/CurriculumSkeleton";
 
 import {
   Button,
@@ -32,39 +32,40 @@ import { useNotification } from "@/context/NotificationContext";
 
 import { Plus } from "lucide-react";
 
-export default function AcademicSessionsPage() {
+export default function CurriculumPage() {
   const navigate = useRouter();
-  const [sessions, setSessions] = useState<AcademicSession[]>([]);
+  const [curriculum, setCurriculum] = useState<Curriculum[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
-    "activate" | "delete" | null
+    "delete" | null
   >(null);
+  const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const { notify } = useNotification();
   const [sessionCount, setSessionCount] = useState(() => {
-    const cached = localStorage.getItem('academicSessionCount');
+    const cached = localStorage.getItem('curriculumCount');
     return cached ? parseInt(cached, 10) : 4; // fallback default
   });
   
   useEffect(() => {
-    if (sessions.length > 0) {
+    if (curriculum.length > 0) {
       setTimeout(() => {
-        setSessionCount(sessions.length);
-        localStorage.setItem('academicSessionCount', sessions.length.toString());
+        setSessionCount(curriculum.length);
+        localStorage.setItem('curriculumCount', curriculum.length.toString());
       }, 0);
     }
-  }, [sessions]);
+  }, [curriculum]);
 
-  const fetchSessions = useCallback(async () => {
+  const fetchCurriculum = useCallback(async () => {
     try {
       setLoading(true);
 
-      const data = await getAcademicSessions();
+      const data = await getCurriculum();
 
-      setSessions(data);
+      setCurriculum(data);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -74,12 +75,12 @@ export default function AcademicSessionsPage() {
         notify(
           "error",
           error.response?.data?.message ??
-            "Failed to fetch academic sessions."
+            "Failed to fetch curriculum."
         );
       } else {
         notify(
           "error",
-          "Failed to fetch academic sessions."
+          "Failed to fetch curriculum."
         );
       }
     } finally {
@@ -89,37 +90,37 @@ export default function AcademicSessionsPage() {
 
   useEffect(() => {
     setTimeout(() => {
-      fetchSessions();
+      fetchCurriculum();
     }, 0);
-  }, [fetchSessions]);
+  }, [fetchCurriculum]);
 
   const handleCreate = async (
-    data: CreateAcademicSessionInput
+    data: CreateCurriculumInput
   ) => {
     try {
       setCreating(true);
 
-      await createAcademicSession(data);
+      await createCurriculum(data);
       
       notify(
         "success",
-        "Academic session created successfully."
+        "Curriculum created successfully."
       );
       
       setShowModal(false);
       
-      await fetchSessions();
+      await fetchCurriculum();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         notify(
           "error",
           error.response?.data?.message ??
-            "Failed to create session."
+            "Failed to create curriculum."
         );
       } else {
         notify(
           "error",
-          "Failed to create session."
+          "Failed to create curriculum."
         );
       }
     } finally {
@@ -127,44 +128,57 @@ export default function AcademicSessionsPage() {
     }
   };
 
-  const handleActivate = async (id: string) => {
-
-    try {
-      await activateAcademicSession(id);
-
-      notify(
-        "success",
-        "Academic session activated successfully."
-      );
-      
-      await fetchSessions();
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify(
-          "error",
-          error.response?.data?.message ??
-            "Activation failed."
+  const handleUpdate = async (
+      data: CreateCurriculumInput
+    ) => {
+      if (!editingCurriculum) return;
+    
+      try {
+        setLoading(true);
+    
+        await updateCurriculum(
+          editingCurriculum._id,
+          data
         );
-      } else {
+    
         notify(
-          "error",
-          "Activation failed."
+          "success",
+          "Curriculum updated successfully."
         );
+    
+        setShowModal(false);
+        setEditingCurriculum(null);
+    
+        await fetchCurriculum();
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          notify(
+            "error",
+            error.response?.data?.message ??
+              "Failed to update curriculum."
+          );
+        } else {
+          notify(
+            "error",
+            "Failed to update curriculum."
+          );
+        }
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
 
   const handleDelete = async (id: string) => {
 
     try {
-      await deleteAcademicSession(id);
+      await deleteCurriculum(id);
 
       notify(
         "success",
-        "Academic session deleted successfully."
+        "Curriculum deleted successfully."
       );
       
-      await fetchSessions();
+      await fetchCurriculum();
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         notify(
@@ -184,53 +198,52 @@ export default function AcademicSessionsPage() {
   return (
     <main className="p-4">
       <PageHeader
-        title="Academic Sessions"
-        subtitle="Manage academic sessions."
+        title="Curriculum"
+        subtitle="Manage academic curriculum."
       
         action={
           <Button
               leftIcon={<Plus size={18} />}
               onClick={() => setShowModal(true)}
           >
-              New Session
+              New Curriculum
           </Button>
         }
       />
-        <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-35 md:mt-30">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-30">
         {loading ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {Array.from({ length: sessionCount }).map((_, index) => (
-              <AcademicSessionSkeleton key={index} isActive={index === 0} />
+              <CurriculumSkeleton key={index}/>
             ))}
           </div>
         ) : (
-          sessions.length === 0 ? (
+          curriculum.length === 0 ? (
             <EmptyState
-              title="No Academic Sessions"
-              description="Create your first academic session."
+              title="No Curricula"
+              description="Create your first curriculum."
           
               action={
                 <Button
                     leftIcon={<Plus size={18} />}
                     onClick={() => setShowModal(true)}
                 >
-                    New Session
+                    New Curriculum
                 </Button>
               }
             />
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {sessions.map((session) => (
-                <AcademicSessionCard
-                  key={session._id}
-                  session={session}
-                  onActivate={() => {
-                    setSelectedId(session._id);
-                    setConfirmAction("activate");
-                    setConfirmOpen(true);
+              {curriculum.map((curriculumItem) => (
+                <CurriculumCard
+                  key={curriculumItem._id}
+                  curriculum={curriculumItem}
+                  onEdit={() => {
+                    setEditingCurriculum(curriculumItem); 
+                    setShowModal(true)
                   }}
                   onDelete={() => {
-                    setSelectedId(session._id);
+                    setSelectedId(curriculumItem._id);
                     setConfirmAction("delete");
                     setConfirmOpen(true);
                   }}
@@ -242,38 +255,27 @@ export default function AcademicSessionsPage() {
   
         <Modal
           open={showModal}
-          title="New Academic Session"
-          description="Create a new academic session."
+          title="New Curriculum"
+          description="Create a new academic curriculum."
           onClose={() => setShowModal(false)}
         >
-          <AcademicSessionForm
+          <CurriculumForm
             loading={creating}
-            onSubmit={handleCreate}
+            onSubmit={
+              editingCurriculum ? handleUpdate : handleCreate
+            }
+            initialValues={editingCurriculum? {
+              curriculumName: editingCurriculum.curriculumName,
+              year: editingCurriculum.year,} : undefined}
           />
         </Modal>
   
         <ConfirmDialog
           open={confirmOpen}
-          title={
-            confirmAction === "activate"
-              ? "Activate Academic Session"
-              : "Delete Academic Session"
-          }
-          description={
-            confirmAction === "activate"
-              ? "This will deactivate the current active academic session."
-              : "This action cannot be undone."
-          }
-          confirmText={
-            confirmAction === "activate"
-              ? "Activate"
-              : "Delete"
-          }
-          confirmVariant={
-            confirmAction === "activate"
-              ? "success"
-              : "danger"
-          }
+          title="Delete Curriculum"
+          description="This action cannot be undone."
+          confirmText="Delete"
+          confirmVariant="danger"
           onCancel={() => {
             setConfirmOpen(false);
             setSelectedId("");
@@ -282,10 +284,8 @@ export default function AcademicSessionsPage() {
           onConfirm={async () => {
             if (!selectedId || !confirmAction) return;
         
-            if (confirmAction === "activate") {
-              await handleActivate(selectedId);
-            } else {
-              await handleDelete(selectedId);
+            if (confirmAction === "delete") {
+              return await handleDelete(selectedId);
             }
         
             setConfirmOpen(false);

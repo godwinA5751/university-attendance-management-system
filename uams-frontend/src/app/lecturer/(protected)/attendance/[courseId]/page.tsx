@@ -79,7 +79,9 @@ export default function TakeAttendancePage() {
   }, [courseId, date, router, notify]);
 
   useEffect(() => {
-    (() => fetchStudents())();
+    setTimeout(() => {
+      fetchStudents();
+    }, 0);
   }, [fetchStudents]);
 
   const handleMark = async (

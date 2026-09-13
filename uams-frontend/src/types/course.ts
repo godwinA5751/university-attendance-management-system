@@ -1,6 +1,6 @@
-export interface AcademicSession {
+export interface Curriculum {
   _id: string;
-  sessionName: string;
+  curriculumName: string;
 }
 
 export interface Lecturer {
@@ -17,7 +17,7 @@ export interface Course {
   semester: "First" | "Second";
   level: number;
 
-  academicSessionId: AcademicSession;
+  curriculumId: Curriculum;
 
   lecturers: Lecturer[];
 }
@@ -28,7 +28,7 @@ export interface CreateCourseInput {
   unit: number;
   semester: "First" | "Second";
   level: number;
-  academicSessionId: string;
+  curriculumId: string;
 }
 
 // export interface UpdateCourseInput

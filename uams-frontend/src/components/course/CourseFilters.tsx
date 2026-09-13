@@ -1,20 +1,20 @@
 "use client";
 
 import { Input, Button, Select } from "@/components/ui";
-import { AcademicSession } from "@/types/academicSession";
+import { Curriculum } from "@/types/curriculum";
 
 interface CourseFiltersProps {
   search: string;
   level: string;
   semester: string;
-  academicSessionId: string;
+  curriculumId: string;
 
-  sessions: AcademicSession[];
+  curriculum: Curriculum[];
 
   onSearchChange: (value: string) => void;
   onLevelChange: (value: string) => void;
   onSemesterChange: (value: string) => void;
-  onSessionChange: (value: string) => void;
+  onCurriculumChange: (value: string) => void;
 
   onReset: () => void;
 }
@@ -23,12 +23,13 @@ export default function CourseFilters({
   search,
   level,
   semester,
-  academicSessionId,
-  sessions,
+  curriculumId,
+  curriculum,
+
   onSearchChange,
   onLevelChange,
   onSemesterChange,
-  onSessionChange,
+  onCurriculumChange,
   onReset,
 }: CourseFiltersProps) {
   return (
@@ -63,17 +64,17 @@ export default function CourseFilters({
       </Select>
 
       <Select
-        value={academicSessionId}
-        onChange={(e) => onSessionChange(e.target.value)}
+        value={curriculumId}
+        onChange={(e) => onCurriculumChange(e.target.value)}
       >
-        <option value="">All Sessions</option>
+        <option value="">All Curriculum</option>
 
-        {sessions.map((session) => (
+        {curriculum.map((cur) => (
           <option
-            key={session._id}
-            value={session._id}
+            key={cur._id}
+            value={cur._id}
           >
-            {session.sessionName}
+            {cur.curriculumName}
           </option>
         ))}
       </Select>

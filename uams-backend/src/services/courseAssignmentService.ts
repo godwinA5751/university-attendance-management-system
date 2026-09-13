@@ -7,6 +7,19 @@ import type {
 import { Course } from "../models/Course.js";
 import { Lecturer } from "../models/Lecturer.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+import { AcademicSession } from "../models/AcademicSession.js";
+
+const getActiveSession = async () => {
+  const activeSession = await AcademicSession.findOne({
+    isActive: true,
+  });
+
+  if (!activeSession) {
+    throw new Error("No active academic session found");
+  }
+
+  return activeSession;
+};
 
 export const assignLecturersToCourse = async (
   input: AssignLecturersInput
@@ -14,30 +27,45 @@ export const assignLecturersToCourse = async (
   const { courseId, lecturerIds } = input;
 
   const course = await Course.findById(courseId);
+
   if (!course) {
     throw new Error("Course not found");
   }
 
-  const lecturers = await Lecturer.find({
-    _id: { $in: lecturerIds },
-  });
-  if (lecturers.length !== lecturerIds.length) {
-    throw new Error("One or more lecturers not found");
-  }
+  const activeSession = await getActiveSession();
 
-  const uniqueLecturerIds = [...new Set(lecturerIds)];
+  const uniqueLecturerIds = [
+    ...new Set(lecturerIds),
+  ];
+
+  const lecturers = await Lecturer.find({
+    _id: {
+      $in: uniqueLecturerIds,
+    },
+  });
+
+  if (
+    lecturers.length !==
+    uniqueLecturerIds.length
+  ) {
+    throw new Error(
+      "One or more lecturers not found"
+    );
+  }
 
   for (const lecturerId of uniqueLecturerIds) {
     await CourseAssignment.updateOne(
       {
         courseId,
         lecturerId,
-        academicSessionId: course.academicSessionId,
+        academicSessionId:
+          activeSession._id,
       },
       {
         courseId,
         lecturerId,
-        academicSessionId: course.academicSessionId,
+        academicSessionId:
+          activeSession._id,
       },
       {
         upsert: true,
@@ -45,34 +73,59 @@ export const assignLecturersToCourse = async (
     );
   }
 
-  const assignments = await CourseAssignment.find({ courseId })
-    .populate("courseId")
-    .populate({
-      path: "lecturerId",
-      populate: {
-        path: "userId",
-        select: "firstName lastName",
-      },
+  const assignments =
+    await CourseAssignment.find({
+      courseId,
+      academicSessionId:
+        activeSession._id,
     })
-    .populate("academicSessionId");
+      .populate({
+        path: "courseId",
+        populate: {
+          path: "curriculumId",
+        },
+      })
+      .populate({
+        path: "lecturerId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName",
+        },
+      });
 
-  return assignments.map((assignment) => {
-    const lecturer = assignment.lecturerId as any;
-    const user = lecturer.userId as any;
+  return assignments
+    .filter((assignment: any) =>
+      assignment.lecturerId &&
+      assignment.lecturerId.userId
+    )
+    .map((assignment: any) => {
+      const lecturer =
+        assignment.lecturerId;
 
-    return {
-      _id: assignment._id,
-      course: assignment.courseId,
-      academicSession: assignment.academicSessionId,
-      lecturer: {
-        _id: lecturer._id,
-        staffNumber: lecturer.staffNumber,
-        department: lecturer.department,
-        faculty: lecturer.faculty,
-        lecturerName: `${user.firstName} ${user.lastName}`,
-      },
-    };
-  });
+      const user =
+        lecturer.userId;
+
+      const course =
+        assignment.courseId;
+
+      return {
+        _id: assignment._id,
+        course,
+        curriculum:
+          course.curriculumId,
+        lecturer: {
+          _id: lecturer._id,
+          staffNumber:
+            lecturer.staffNumber,
+          department:
+            lecturer.department,
+          faculty:
+            lecturer.faculty,
+          lecturerName:
+            `${user.firstName} ${user.lastName}`,
+        },
+      };
+    });
 };
 
 export const replaceCourseLecturers = async (
@@ -80,193 +133,313 @@ export const replaceCourseLecturers = async (
 ) => {
   const { courseId, lecturerIds } = input;
 
-  const course = await Course.findById(courseId);
+  const course = await Course.findById(
+    courseId
+  );
+
   if (!course) {
     throw new Error("Course not found");
   }
 
+  const activeSession =
+    await getActiveSession();
+
+  const uniqueLecturerIds = [
+    ...new Set(lecturerIds),
+  ];
+
   const lecturers = await Lecturer.find({
-    _id: { $in: lecturerIds },
+    _id: {
+      $in: uniqueLecturerIds,
+    },
   });
-  if (lecturers.length !== lecturerIds.length) {
-    throw new Error("One or more lecturers not found");
+
+  if (
+    lecturers.length !==
+    uniqueLecturerIds.length
+  ) {
+    throw new Error(
+      "One or more lecturers not found"
+    );
   }
 
-  const uniqueLecturerIds = [...new Set(lecturerIds)];
-
   // Remove existing assignments
+  // for this course in the active session
   await CourseAssignment.deleteMany({
     courseId,
-    academicSessionId: course.academicSessionId,
+    academicSessionId:
+      activeSession._id,
   });
 
   // Create new assignments
-  await CourseAssignment.insertMany(
-    uniqueLecturerIds.map((lecturerId) => ({
+  if (uniqueLecturerIds.length > 0) {
+    await CourseAssignment.insertMany(
+      uniqueLecturerIds.map(
+        (lecturerId) => ({
+          courseId,
+          lecturerId,
+          academicSessionId:
+            activeSession._id,
+        })
+      )
+    );
+  }
+
+  const assignments =
+    await CourseAssignment.find({
       courseId,
-      lecturerId,
-      academicSessionId: course.academicSessionId,
-    }))
-  );
-
-  const assignments = await CourseAssignment.find({
-    courseId,
-    academicSessionId: course.academicSessionId,
-  })
-    .populate("courseId")
-    .populate({
-      path: "lecturerId",
-      populate: {
-        path: "userId",
-        select: "firstName lastName",
-      },
+      academicSessionId:
+        activeSession._id,
     })
-    .populate("academicSessionId");
+      .populate({
+        path: "courseId",
+        populate: {
+          path: "curriculumId",
+        },
+      })
+      .populate({
+        path: "lecturerId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName",
+        },
+      });
 
-  return assignments.map((assignment) => {
-    const lecturer = assignment.lecturerId as any;
-    const user = lecturer.userId as any;
+  return assignments
+    .filter((assignment: any) =>
+      assignment.lecturerId &&
+      assignment.lecturerId.userId
+    )
+    .map((assignment: any) => {
+      const lecturer =
+        assignment.lecturerId;
 
-    return {
-      _id: assignment._id,
-      course: assignment.courseId,
-      academicSession: assignment.academicSessionId,
-      lecturer: {
-        _id: lecturer._id,
-        staffNumber: lecturer.staffNumber,
-        department: lecturer.department,
-        faculty: lecturer.faculty,
-        lecturerName: `${user.firstName} ${user.lastName}`,
-      },
-    };
-  });
+      const user =
+        lecturer.userId;
+
+      const course =
+        assignment.courseId;
+
+      return {
+        _id: assignment._id,
+        course,
+        curriculum:
+          course.curriculumId,
+        lecturer: {
+          _id: lecturer._id,
+          staffNumber:
+            lecturer.staffNumber,
+          department:
+            lecturer.department,
+          faculty:
+            lecturer.faculty,
+          lecturerName:
+            `${user.firstName} ${user.lastName}`,
+        },
+      };
+    });
 };
 
 export const removeLecturerFromCourse = async (
   input: RemoveLecturerInput
 ) => {
-  const { courseId, lecturerId } = input;
+  const {
+    courseId,
+    lecturerId,
+  } = input;
 
-  const course = await Course.findById(courseId);
+  const course = await Course.findById(
+    courseId
+  );
 
   if (!course) {
     throw new Error("Course not found");
   }
 
-  const assignment = await CourseAssignment.findOne({
-    courseId,
-    lecturerId,
-    academicSessionId: course.academicSessionId,
-  });
+  const activeSession =
+    await getActiveSession();
+
+  const assignment =
+    await CourseAssignment.findOne({
+      courseId,
+      lecturerId,
+      academicSessionId:
+        activeSession._id,
+    });
 
   if (!assignment) {
-    throw new Error("Lecturer is not assigned to this course");
+    throw new Error(
+      "Lecturer is not assigned to this course"
+    );
   }
 
   await assignment.deleteOne();
 
   return {
-    message: "Lecturer removed successfully",
+    message:
+      "Lecturer removed successfully",
   };
 };
 
-export const getAssignedLecturersForCourse = async (
-  courseId: string
-) => {
-  const course = await Course.findById(courseId);
+export const getAssignedLecturersForCourse =
+  async (courseId: string) => {
+    const course =
+      await Course.findById(courseId);
 
-  if (!course) {
-    throw new Error("Course not found");
-  }
-
-  const assignments = await CourseAssignment.find({
-    courseId,
-    academicSessionId: course.academicSessionId,
-  }).populate({
-    path: "lecturerId",
-    populate: {
-      path: "userId",
-      select: "firstName lastName",
-    },
-  });
-
-  return assignments
-    .filter(
-      (assignment: any) =>
-        assignment.lecturerId &&
-        assignment.lecturerId.userId
-    )
-    .map((assignment: any) => {
-      const lecturer = assignment.lecturerId;
-      const user = lecturer.userId;
-  
-      return {
-        _id: lecturer._id,
-        staffNumber: lecturer.staffNumber,
-        department: lecturer.department,
-        faculty: lecturer.faculty,
-        lecturerName: `${user.firstName} ${user.lastName}`,
-      };
-    });
-};
-
-export const getLecturersForCourse = async (courseId: string) => {
-  const assignments = await CourseAssignment.find({ courseId }).populate({
-    path: "lecturerId",
-    populate: {
-      path: "userId",
-      select: "firstName lastName",
-    },
-  });
-
-  return assignments.map((assignment) => {
-    const lecturer = assignment.lecturerId as any;
-    const user = lecturer.userId as any;
-    return {
-      _id: lecturer._id,
-      staffNumber: lecturer.staffNumber,
-      department: lecturer.department,
-      faculty: lecturer.faculty,
-      lecturerName: `${user.firstName} ${user.lastName}`,
-    };
-  });
-};
-
-export const getLecturersGroupedByCourse = async () => {
-  const assignments = await CourseAssignment.find().populate({
-    path: "lecturerId",
-    populate: {
-      path: "userId",
-      select: "firstName lastName",
-    },
-  });
-
-  const grouped: Record<string, any[]> = {};
-
-  assignments.forEach((assignment: any) => {
-    // Skip orphaned assignments
-    if (!assignment.lecturerId || !assignment.lecturerId.userId) {
-      return;
+    if (!course) {
+      throw new Error(
+        "Course not found"
+      );
     }
 
-    const key = assignment.courseId.toString();
-    const lecturer = assignment.lecturerId;
-    const user = lecturer.userId;
+    const activeSession =
+      await getActiveSession();
 
-    const formattedLecturer = {
-      _id: lecturer._id,
-      staffNumber: lecturer.staffNumber,
-      department: lecturer.department,
-      faculty: lecturer.faculty,
-      lecturerName: `${user.firstName} ${user.lastName}`,
-    };
+    const assignments =
+      await CourseAssignment.find({
+        courseId,
+        academicSessionId:
+          activeSession._id,
+      }).populate({
+        path: "lecturerId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName",
+        },
+      });
 
-    if (!grouped[key]) {
-      grouped[key] = [];
-    }
+    return assignments
+      .filter(
+        (assignment: any) =>
+          assignment.lecturerId &&
+          assignment.lecturerId.userId
+      )
+      .map((assignment: any) => {
+        const lecturer =
+          assignment.lecturerId;
 
-    grouped[key].push(formattedLecturer);
-  });
+        const user =
+          lecturer.userId;
 
-  return grouped;
-};
+        return {
+          _id: lecturer._id,
+          staffNumber:
+            lecturer.staffNumber,
+          department:
+            lecturer.department,
+          faculty:
+            lecturer.faculty,
+          lecturerName:
+            `${user.firstName} ${user.lastName}`,
+        };
+      });
+  };
+
+export const getLecturersForCourse =
+  async (courseId: string) => {
+    const activeSession =
+      await getActiveSession();
+
+    const assignments =
+      await CourseAssignment.find({
+        courseId,
+        academicSessionId:
+          activeSession._id,
+      }).populate({
+        path: "lecturerId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName",
+        },
+      });
+
+    return assignments
+      .filter(
+        (assignment: any) =>
+          assignment.lecturerId &&
+          assignment.lecturerId.userId
+      )
+      .map((assignment: any) => {
+        const lecturer =
+          assignment.lecturerId;
+
+        const user =
+          lecturer.userId;
+
+        return {
+          _id: lecturer._id,
+          staffNumber:
+            lecturer.staffNumber,
+          department:
+            lecturer.department,
+          faculty:
+            lecturer.faculty,
+          lecturerName:
+            `${user.firstName} ${user.lastName}`,
+        };
+      });
+  };
+
+export const getLecturersGroupedByCourse =
+  async () => {
+    const activeSession =
+      await getActiveSession();
+
+    const assignments =
+      await CourseAssignment.find({
+        academicSessionId:
+          activeSession._id,
+      }).populate({
+        path: "lecturerId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName",
+        },
+      });
+
+    const grouped:
+      Record<string, any[]> = {};
+
+    assignments.forEach(
+      (assignment: any) => {
+        // Skip orphaned assignments
+        if (
+          !assignment.lecturerId ||
+          !assignment.lecturerId.userId
+        ) {
+          return;
+        }
+
+        const key =
+          assignment.courseId.toString();
+
+        const lecturer =
+          assignment.lecturerId;
+
+        const user =
+          lecturer.userId;
+
+        const formattedLecturer = {
+          _id: lecturer._id,
+          staffNumber:
+            lecturer.staffNumber,
+          department:
+            lecturer.department,
+          faculty:
+            lecturer.faculty,
+          lecturerName:
+            `${user.firstName} ${user.lastName}`,
+        };
+
+        if (!grouped[key]) {
+          grouped[key] = [];
+        }
+
+        grouped[key].push(
+          formattedLecturer
+        );
+      }
+    );
+
+    return grouped;
+  };

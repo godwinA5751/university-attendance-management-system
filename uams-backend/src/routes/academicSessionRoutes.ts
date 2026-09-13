@@ -5,14 +5,27 @@ import { authorize } from "../middleware/authorize.js";
 
 const router = express.Router();
 
+router.post(
+  "/",
+  verifyJWT,
+  authorize(["admin"]),
+  createAcademicSessionController
+);
+
 router.get(
   "/",
   verifyJWT,
   authorize(["admin"]),
   getAcademicSessionsController
 );
-router.post("/", verifyJWT, authorize(["admin"]), createAcademicSessionController);
-router.patch("/:id/activate", verifyJWT, authorize(["admin"]), activateAcademicSessionController);
+
+router.patch(
+  "/:id/activate",
+  verifyJWT,
+  authorize(["admin"]),
+  activateAcademicSessionController
+);
+
 router.delete(
   "/:id",
   verifyJWT,

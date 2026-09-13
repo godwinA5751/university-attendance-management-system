@@ -1,7 +1,9 @@
 import type { CreateCourseInput, UpdateCourseInput } from "../types/course.types.js";
-import { AcademicSession } from "../models/AcademicSession.js";
+import { Curriculum } from "../models/Curriculum.js";
 import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+import { CourseEnrollment } from "../models/CourseEnrollment.js";
+import { Attendance } from "../models/Attendance.js";
 import { enrollExistingStudentsIntoCourse } from "./enrollmentSyncService.js";
 
 export const getAllCourses = async (
@@ -36,8 +38,8 @@ export const getAllCourses = async (
     filter.semester = query.semester;
   }
   
-  if (query.academicSessionId) {
-    filter.academicSessionId = query.academicSessionId;
+  if (query.curriculumId) {
+    filter.curriculumId = query.curriculumId;
   }
   
   if (query.search) {
@@ -59,7 +61,7 @@ export const getAllCourses = async (
   const total = await Course.countDocuments(filter);
   
   const courses = await Course.find(filter)
-    .populate("academicSessionId")
+    .populate("curriculumId")
     .sort({
       level: 1,
       courseCode: 1,
@@ -78,7 +80,7 @@ export const getAllCourses = async (
 };
 
 export const getCourse = async (courseId: string) => {
-  const course = await Course.findById(courseId).populate("academicSessionId");
+  const course = await Course.findById(courseId).populate("curriculumId");
 
   if (!course) {
     throw new Error("Course not found");
@@ -94,25 +96,25 @@ export const createCourse = async (input: CreateCourseInput) => {
     unit,
     semester,
     level,
-    academicSessionId,
+    curriculumId,
   } = input;
   
-  const academicSession = await AcademicSession.findById(
-    academicSessionId
+  const curriculum = await Curriculum.findById(
+    curriculumId
   );
   
-  if (!academicSession) {
-    throw new Error("Academic session not found");
+  if (!curriculum) {
+    throw new Error("Curriculum not found");
   }
   
   const existingCourse = await Course.findOne({
     courseCode,
-    academicSessionId,
+    curriculumId,
   });
   
   if (existingCourse) {
     throw new Error(
-      "Course already exists for this academic session"
+      "Course already exists for this curriculum"
     );
   }
   
@@ -122,7 +124,7 @@ export const createCourse = async (input: CreateCourseInput) => {
     unit,
     semester,
     level,
-    academicSessionId,
+    curriculumId,
   });
   
   await course.save();
@@ -130,7 +132,7 @@ export const createCourse = async (input: CreateCourseInput) => {
   await enrollExistingStudentsIntoCourse({
     courseId: course._id.toString(),
     level: course.level,
-    academicSessionId: course.academicSessionId.toString(),
+    curriculumId: course.curriculumId.toString(),
   });
   
   return course;
@@ -146,7 +148,7 @@ export const updateCourse = async (
     unit,
     semester,
     level,
-    academicSessionId,
+    curriculumId,
   } = input;
 
   const course = await Course.findById(courseId);
@@ -155,23 +157,23 @@ export const updateCourse = async (
     throw new Error("Course not found");
   }
 
-  const academicSession = await AcademicSession.findById(
-    academicSessionId
+  const curriculum = await Curriculum.findById(
+    curriculumId
   );
 
-  if (!academicSession) {
-    throw new Error("Academic session not found");
+  if (!curriculum) {
+    throw new Error("Curriculum not found");
   }
 
   const existingCourse = await Course.findOne({
     courseCode,
-    academicSessionId,
+    curriculumId,
     _id: { $ne: courseId },
   });
 
   if (existingCourse) {
     throw new Error(
-      "Course already exists for this academic session"
+      "Course already exists for this curriculum"
     );
   }
 
@@ -180,7 +182,7 @@ export const updateCourse = async (
   course.unit = unit;
   course.semester = semester;
   course.level = level;
-  course.academicSessionId = academicSessionId as any;
+  course.curriculumId = curriculumId as any;
 
   await course.save();
 
@@ -196,10 +198,37 @@ export const deleteCourse = async (
     throw new Error("Course not found");
   }
 
-  await CourseAssignment.deleteMany({
+  // Find all enrollments for this course
+  const enrollments =
+    await CourseEnrollment.find({
       courseId,
+    });
+
+  // Get enrollment IDs
+  const enrollmentIds =
+    enrollments.map(
+      (enrollment) => enrollment._id
+    );
+
+  // Delete attendance records linked
+  // to those enrollments
+  await Attendance.deleteMany({
+    enrollmentId: {
+      $in: enrollmentIds,
+    },
   });
-  
+
+  // Delete course enrollments
+  await CourseEnrollment.deleteMany({
+    courseId,
+  });
+
+  // Delete lecturer assignments
+  await CourseAssignment.deleteMany({
+    courseId,
+  });
+
+  // Delete the course
   await course.deleteOne();
 
   return;

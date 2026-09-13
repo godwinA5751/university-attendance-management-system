@@ -87,17 +87,19 @@ export default function AttendancePage() {
   }, [courseId, date, notify]);
 
   useEffect(() => {
-    (() => fetchStudents)();
+    setTimeout(() => {
+      fetchStudents();
+    }, 0);
   }, [fetchStudents]);
 
   return (
-    <main className="p-8">
+    <main className="p-4">
       <PageHeader
         title="Attendance"
         subtitle="View recorded attendance for a course on a given date"
       />
 
-      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19 space-y-6">
+      <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-30 space-y-6">
         <Card>
           {loadingCourses ? (
             <Skeleton className="h-20 rounded-xl" />
@@ -112,7 +114,7 @@ export default function AttendancePage() {
                 {courses.map((course) => (
                   <option key={course._id} value={course._id}>
                     {course.courseCode} — {course.courseTitle} (
-                    {course.academicSessionId.sessionName})
+                    {course.curriculumId?.curriculumName})
                   </option>
                 ))}
               </Select>

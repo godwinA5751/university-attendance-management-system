@@ -5,29 +5,30 @@ import { createCourseEnrollment } from "./courseEnrollmentService.js";
 type EnrollStudentIntoLevelCoursesInput = {
   studentId: string;
   level: number;
-  academicSessionId: string;
+  curriculumId: string;
   carryOverCourseIds?: string[];
 };
-
 
 type EnrollExistingStudentsIntoCourseInput = {
   courseId: string;
   level: number;
-  academicSessionId: string;
+  curriculumId: string;
 };
 
 export const enrollStudentIntoLevelCourses = async ({
   studentId,
   level,
-  academicSessionId,
+  curriculumId,
   carryOverCourseIds = [],
 }: EnrollStudentIntoLevelCoursesInput) => {
   // Find all courses for the student's level
+  // and curriculum
   const levelCourses = await Course.find({
     level,
+    curriculumId,
   });
 
-  // Merge level courses + carry over courses
+  // Merge level courses + carryover courses
   const allCourseIds = [
     ...levelCourses.map((course) =>
       course._id.toString()
@@ -36,7 +37,9 @@ export const enrollStudentIntoLevelCourses = async ({
   ];
 
   // Remove duplicates
-  const uniqueCourseIds = [...new Set(allCourseIds)];
+  const uniqueCourseIds = [
+    ...new Set(allCourseIds),
+  ];
 
   // Create enrollments
   for (const courseId of uniqueCourseIds) {
@@ -44,13 +47,12 @@ export const enrollStudentIntoLevelCourses = async ({
       await createCourseEnrollment({
         studentId,
         courseId,
-        academicSessionId
       });
     } catch (error) {
       if (
         error instanceof Error &&
         error.message ===
-          "Student already enrolled in this course for this session"
+          "Student already enrolled in this course for this curriculum"
       ) {
         continue;
       }
@@ -63,30 +65,33 @@ export const enrollStudentIntoLevelCourses = async ({
 export const enrollExistingStudentsIntoCourse = async ({
   courseId,
   level,
-  academicSessionId,
+  curriculumId,
 }: EnrollExistingStudentsIntoCourseInput) => {
-  // 1. Verify course exists
-  const course = await Course.findById(courseId);
+  // Verify course exists
+  const course = await Course.findById(
+    courseId
+  );
 
   if (!course) {
     throw new Error("Course not found");
   }
 
-  // 2. Find all students in this level
+  // Find students in this level
+  // AND curriculum
   const students = await Student.find({
     currentLevel: level,
+    curriculumId,
   });
 
-  // 3. Enroll each student
+  // Enroll each matching student
   for (const student of students) {
     try {
       await createCourseEnrollment({
         studentId: student._id.toString(),
         courseId,
-        academicSessionId,
       });
     } catch (error) {
-      // Ignore duplicates
+      // Ignore duplicate enrollments
       if (
         error instanceof Error &&
         error.message ===

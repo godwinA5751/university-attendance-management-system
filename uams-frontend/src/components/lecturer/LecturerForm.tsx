@@ -29,6 +29,9 @@ export default function LecturerForm({
       firstName:
         initialValues?.firstName ?? "",
 
+      middleName:
+        initialValues?.middleName ?? "",
+
       lastName:
         initialValues?.lastName ?? "",
 
@@ -78,6 +81,17 @@ export default function LecturerForm({
             )
           }
           required
+        />
+
+        <Input
+          label="Middle Name"
+          value={formData.middleName ?? ""}
+          onChange={(e) =>
+            handleChange(
+              "middleName",
+              e.target.value
+            )
+          }
         />
 
         <Input

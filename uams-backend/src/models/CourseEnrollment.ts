@@ -14,12 +14,6 @@ const courseEnrollmentSchema = new mongoose.Schema(
       required: true,
     },
 
-    academicSessionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "AcademicSession",
-      required: true,
-    },
-
     status: {
       type: String,
       enum: ["active", "dropped", "completed"],
@@ -35,7 +29,6 @@ courseEnrollmentSchema.index(
   {
     studentId: 1,
     courseId: 1,
-    sessionId: 1,
   },
   {
     unique: true,

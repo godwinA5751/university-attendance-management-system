@@ -10,7 +10,7 @@ import { useNotification } from "@/context/NotificationContext";
 import { getMyDashboard } from "@/services/lecturerService";
 import { LecturerDashboardCourse } from "@/types/lecturer";
 import { PageHeader, EmptyState, Card, Button } from "@/components/ui";
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
+import LecturerDashboardSkeleton from "@/components/lecturer/LecturerDashboardSkeleton";
 
 export default function LecturerDashboardPage() {
   const [courses, setCourses] = useState<LecturerDashboardCourse[] | null>(
@@ -65,11 +65,7 @@ export default function LecturerDashboardPage() {
 
       <div className="scroll-custom h-[calc(100vh-200px)] overflow-y-auto mt-19">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <DashboardSkeleton key={index} />
-            ))}
-          </div>
+          <LecturerDashboardSkeleton />
         ) : !courses || courses.length === 0 ? (
           <EmptyState
             title="No Courses Assigned"

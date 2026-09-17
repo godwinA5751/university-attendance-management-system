@@ -18,3 +18,12 @@ export const getStudentAnalytics = async (studentId: string) => {
 
   return response.data.data;
 };
+
+export const getMyAttendance = async () => {
+  const response = await api.get<{
+    message: string;
+    data: StudentAttendanceStats;
+  }>("/analytics/student/me");
+
+  return response.data.data;
+};

@@ -5,6 +5,7 @@ import {
   CreateStudentInput,
   UpdateStudentInput,
   PromoteStudentInput,
+  StudentProfile
 } from "@/types/student";
 
 export type StudentPaginationResponse = {
@@ -23,6 +24,15 @@ type GetStudentsParams = {
   search?: string;
   level?: number;
   curriculumId?: string;
+};
+
+export const getMyProfile = async () => {
+  const response = await api.get<{
+    message: string;
+    data: StudentProfile;
+  }>("/students/me");
+
+  return response.data.data;
 };
 
 export const getStudents = async (

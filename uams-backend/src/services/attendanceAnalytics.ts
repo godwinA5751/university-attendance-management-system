@@ -94,11 +94,27 @@ export const getCourseAttendanceStats = async (courseId: string) => {
 
 export const getDashboardStats = async () => {
   const totalStudents = await Student.countDocuments();
-  const totalCourses = await CourseEnrollment.distinct("courseId");
-  const totalEnrollments = await CourseEnrollment.countDocuments();
   const totalLecturers = await Lecturer.countDocuments();
+
   const academicSession = await AcademicSession.findOne({ isActive: true });
-  const academicSessionName = academicSession?.sessionName;
+  const academicSessionName = academicSession?.sessionName ?? null;
+  
+  let totalCourses = 0;
+  let totalEnrollments = 0;
+
+  if (academicSession) {
+    const activeCourseIds = await CourseAssignment.distinct(
+      "courseId",
+      { academicSessionId: academicSession._id }
+    );
+
+    totalCourses = activeCourseIds.length;
+
+    totalEnrollments = await CourseEnrollment.countDocuments({
+      courseId: { $in: activeCourseIds },
+      status: "active",
+    });
+  }
 
   // Get start and end of today
   const startOfDay = new Date();
@@ -122,7 +138,7 @@ export const getDashboardStats = async () => {
   return {
     academicSession: academicSessionName,
     totalStudents,
-    totalCourses: totalCourses.length,
+    totalCourses,
     totalEnrollments,
     totalLecturers,
     totalAttendance,

@@ -37,7 +37,9 @@ export const assignLecturersController = async (
         return res.status(400).json({ message: error.message });
       }
 
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({
+        message: "Internal server error",
+      });
     }
 
     return res.status(500).json({
@@ -89,7 +91,7 @@ export const replaceLecturersController = async (
       }
 
       return res.status(500).json({
-        message: error.message,
+        message: "Internal server error",
       });
     }
 
@@ -129,12 +131,16 @@ export const removeLecturerController = async (
       }
 
       if (
-        error.message === "Lecturer not assigned to this course"
+        error.message === "Lecturer is not assigned to this course"
       ) {
-        return res.status(400).json({ message: error.message });
+        return res.status(404).json({
+          message: error.message,
+        });
       }
 
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({
+        message: "Internal server error",
+      });
     }
 
     return res.status(500).json({

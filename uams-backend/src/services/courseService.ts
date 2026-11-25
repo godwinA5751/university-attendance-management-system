@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import type { CreateCourseInput, UpdateCourseInput } from "../types/course.types.js";
 import { Curriculum } from "../models/Curriculum.js";
 import { Course } from "../models/Course.js";
@@ -189,47 +190,55 @@ export const updateCourse = async (
   return course;
 };
 
-export const deleteCourse = async (
-  courseId: string
-) => {
-  const course = await Course.findById(courseId);
+export const deleteCourse = async (courseId: string) => {
+  const mongoSession = await mongoose.startSession();
 
-  if (!course) {
-    throw new Error("Course not found");
-  }
+  try {
+    const result = await mongoSession.withTransaction(async () => {
+      const course = await Course.findById(courseId).session(mongoSession);
 
-  // Find all enrollments for this course
-  const enrollments =
-    await CourseEnrollment.find({
-      courseId,
+      if (!course) {
+        throw new Error("Course not found");
+      }
+
+      const enrollments = await CourseEnrollment.find({
+        courseId,
+      })
+        .select("_id")
+        .session(mongoSession);
+
+      const enrollmentIds = enrollments.map(
+        (enrollment) => enrollment._id
+      );
+
+      await Attendance.deleteMany(
+        {
+          enrollmentId: { $in: enrollmentIds },
+        },
+        { session: mongoSession }
+      );
+
+      await CourseEnrollment.deleteMany(
+        { courseId },
+        { session: mongoSession }
+      );
+
+      await CourseAssignment.deleteMany(
+        { courseId },
+        { session: mongoSession }
+      );
+
+      await course.deleteOne({ session: mongoSession });
+
+      return { message: "Course deleted successfully" };
     });
 
-  // Get enrollment IDs
-  const enrollmentIds =
-    enrollments.map(
-      (enrollment) => enrollment._id
-    );
+    if (!result) {
+      throw new Error("Course deletion transaction failed");
+    }
 
-  // Delete attendance records linked
-  // to those enrollments
-  await Attendance.deleteMany({
-    enrollmentId: {
-      $in: enrollmentIds,
-    },
-  });
-
-  // Delete course enrollments
-  await CourseEnrollment.deleteMany({
-    courseId,
-  });
-
-  // Delete lecturer assignments
-  await CourseAssignment.deleteMany({
-    courseId,
-  });
-
-  // Delete the course
-  await course.deleteOne();
-
-  return;
+    return result;
+  } finally {
+    await mongoSession.endSession();
+  }
 };

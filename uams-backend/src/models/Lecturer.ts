@@ -19,11 +19,13 @@ const lecturerSchema = new mongoose.Schema(
     department: {
       type: String,
       required: true,
+      trim: true,
     },
 
     faculty: {
       type: String,
       required: true,
+      trim: true,
     },
   },
   {

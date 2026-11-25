@@ -3,6 +3,8 @@ import type {
   CreateCurriculumInput,
   UpdateCurriculumInput,
 } from "../types/curriculum.types.js";
+import { Student } from "../models/Student.js";
+import { Course } from "../models/Course.js";
 
 export const createCurriculum = async (
   data: CreateCurriculumInput
@@ -75,16 +77,24 @@ export const updateCurriculum = async (
 export const deleteCurriculum = async (
   curriculumId: string
 ) => {
-  const curriculum =
-    await Curriculum.findById(
-      curriculumId
-    );
+  const curriculum = await Curriculum.findById(curriculumId);
 
   if (!curriculum) {
+    throw new Error("Curriculum not found");
+  }
+
+  const [studentsExist, coursesExist] = await Promise.all([
+    Student.exists({ curriculumId }),
+    Course.exists({ curriculumId }),
+  ]);
+
+  if (studentsExist || coursesExist) {
     throw new Error(
-      "Curriculum not found"
+      "Cannot delete a curriculum that has students or courses assigned to it."
     );
   }
 
   await curriculum.deleteOne();
+
+  return { message: "Curriculum deleted successfully" };
 };

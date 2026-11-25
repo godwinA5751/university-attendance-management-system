@@ -12,6 +12,7 @@ const curriculumSchema = new mongoose.Schema(
     year: {
       type: Number,
       required: true,
+      min: 2000,
     },
   },
   {

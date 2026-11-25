@@ -132,21 +132,22 @@ export const resetPasswordController = async (
   res: Response
 ) => {
   try {
-    const result = await resetPassword(
-      req.params.id as string
-    );
+    const targetUserId = req.params.id as string;
+
+    if (targetUserId === req.user!.id) {
+      return res.status(400).json({
+        message: "You cannot reset your own password using this action.",
+      });
+    }
+
+    const result = await resetPassword(targetUserId);
 
     return res.status(200).json({
       message: result.message,
     });
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "User not found"
-    ) {
-      return res.status(404).json({
-        message: error.message,
-      });
+    if (error instanceof Error && error.message === "User not found") {
+      return res.status(404).json({ message: error.message });
     }
 
     return res.status(500).json({
@@ -160,19 +161,22 @@ export const deactivateUserController = async (
   res: Response
 ) => {
   try {
-    await deactivateUser(req.params.id as string);
+    const targetUserId = req.params.id as string;
+
+    if (targetUserId === req.user!.id) {
+      return res.status(400).json({
+        message: "You cannot deactivate your own account.",
+      });
+    }
+
+    await deactivateUser(targetUserId);
 
     return res.status(200).json({
       message: "User deactivated successfully",
     });
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "User not found"
-    ) {
-      return res.status(404).json({
-        message: error.message,
-      });
+    if (error instanceof Error && error.message === "User not found") {
+      return res.status(404).json({ message: error.message });
     }
 
     return res.status(500).json({

@@ -1,5 +1,9 @@
+import mongoose from "mongoose";
 import type { Request, Response } from "express";
 import { createLecturer, getLecturerCourses, getLecturerProfile, getLecturerById, getAllLecturers, updateLecturer, deleteLecturer } from "../services/lecturerService.js"
+
+const isValidLecturerId = (id: string) =>
+  mongoose.isValidObjectId(id);
 
 export const getLecturerCoursesController = async (
   req: Request,
@@ -47,17 +51,32 @@ export const createLecturerController = async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (
-      error instanceof Error &&
-      error.message === "Staff number already exists"
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
     ) {
       return res.status(409).json({
-        message: error.message,
-      });
-    } else {
-      return res.status(500).json({
-        message: "Internal server error",
+        message: "Staff number already exists",
       });
     }
+    if (error instanceof Error) {
+      if (error.message === "Staff number already exists") {
+        return res.status(409).json({ message: error.message });
+      }
+
+      if (
+        error.message.includes("required") ||
+        error.message.includes("non-empty string") ||
+        error.message.includes("Invalid lecturer input")
+      ) {
+        return res.status(400).json({ message: error.message });
+      }
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 }
 
@@ -95,20 +114,42 @@ export const getAllLecturersController = async (
   res: Response
 ) => {
   try {
-    const { data, pagination } =
-      await getAllLecturers(req.query as any);
-    
-    res.status(200).json({
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 10);
+    const search = req.query.search ?? "";
+
+    if (
+      !Number.isInteger(page) ||
+      page < 1 ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      return res.status(400).json({
+        message: "Invalid pagination parameters",
+      });
+    }
+
+    if (typeof search !== "string") {
+      return res.status(400).json({
+        message: "Search must be a string",
+      });
+    }
+
+    const { data, pagination } = await getAllLecturers({
+      page,
+      limit,
+      search,
+    });
+
+    return res.status(200).json({
       message: "Lecturers fetched successfully",
       data,
       pagination,
     });
-  } catch (error) {
+  } catch {
     return res.status(500).json({
-      message:
-        error instanceof Error
-          ? error.message
-          : "Internal server error",
+      message: "Internal server error",
     });
   }
 };
@@ -118,6 +159,11 @@ export const getLecturerController = async (
   res: Response
 ) => {
   try {
+    if (!isValidLecturerId(req.params.id as string)) {
+      return res.status(400).json({
+        message: "Invalid lecturer ID",
+      });
+    }
     const lecturer = await getLecturerById(
       req.params.id as string
     );
@@ -127,7 +173,10 @@ export const getLecturerController = async (
       data: lecturer,
     });
   } catch (error) {
-    if (error instanceof Error) {
+    if (
+      error instanceof Error &&
+      error.message === "Lecturer not found"
+    ) {
       return res.status(404).json({
         message: error.message,
       });
@@ -144,6 +193,11 @@ export const updateLecturerController = async (
   res: Response
 ) => {
   try {
+    if (!isValidLecturerId(req.params.id as string)) {
+      return res.status(400).json({
+        message: "Invalid lecturer ID",
+      });
+    }
     const lecturer = await updateLecturer(
       req.params.id as string,
       req.body
@@ -155,9 +209,19 @@ export const updateLecturerController = async (
     });
   } catch (error) {
     if (error instanceof Error) {
-      return res.status(400).json({
-        message: error.message,
-      });
+      if (error.message === "Lecturer not found") {
+        return res.status(404).json({ message: error.message });
+      }
+
+      if (
+        error.message.includes("required") ||
+        error.message.includes("non-empty string") ||
+        error.message.includes("Invalid lecturer input") ||
+        error.message.includes("At least one field") ||
+        error.message.includes("cannot be updated")
+      ) {
+        return res.status(400).json({ message: error.message });
+      }
     }
 
     return res.status(500).json({
@@ -171,16 +235,29 @@ export const deleteLecturerController = async (
   res: Response
 ) => {
   try {
+    if (!isValidLecturerId(req.params.id as string)) {
+      return res.status(400).json({
+        message: "Invalid lecturer ID",
+      });
+    }
     await deleteLecturer(req.params.id as string);
 
     return res.status(200).json({
       message: "Lecturer deleted successfully",
     });
   } catch (error) {
-    if (error instanceof Error) {
-      return res.status(404).json({
-        message: error.message,
-      });
+    if (
+      error instanceof Error &&
+      error.message === "Cannot delete a lecturer with course assignments."
+    ) {
+      return res.status(409).json({ message: error.message });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Lecturer not found"
+    ) {
+      return res.status(404).json({ message: error.message });
     }
 
     return res.status(500).json({

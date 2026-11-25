@@ -121,30 +121,36 @@ export const updateCurriculumController =
     }
   };
 
-export const deleteCurriculumController =
-  async (
-    req: Request,
-    res: Response
-  ) => {
-    try {
-      await deleteCurriculum(
-        req.params.id as string
-      );
+export const deleteCurriculumController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const result = await deleteCurriculum(
+      req.params.id as string
+    );
 
-      return res.status(200).json({
-        message:
-          "Curriculum deleted successfully",
-      });
-    } catch (error) {
-      if (error instanceof Error) {
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "Curriculum not found") {
         return res.status(404).json({
           message: error.message,
         });
       }
 
-      return res.status(500).json({
-        message:
-          "Internal server error",
-      });
+      if (
+        error.message ===
+        "Cannot delete a curriculum that has students or courses assigned to it."
+      ) {
+        return res.status(409).json({
+          message: error.message,
+        });
+      }
     }
-  };
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};

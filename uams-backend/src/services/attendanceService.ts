@@ -3,6 +3,7 @@ import { Attendance } from "../models/Attendance.js";
 import type { CreateAttendanceInput } from "../types/attendance.types.js";
 import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 
 export const getAttendanceByStudent = async (studentId: string) => {
   const enrollments = await CourseEnrollment.find({ studentId });
@@ -51,24 +52,36 @@ export const createAttendance = async (input: CreateAttendanceInput, lecturerId:
     throw new Error("Course not found");
   }
   
-  // 3. Authorization
+  
+  // 3. Get active academic session
+  const activeSession = await AcademicSession.findOne({
+    isActive: true,
+  });
+
+  if (!activeSession) {
+    throw new Error("No active academic session");
+  }
+
+  // 4. Verify lecturer assignment for active session
   const assignment = await CourseAssignment.findOne({
     courseId: enrollment.courseId,
     lecturerId,
+    academicSessionId: activeSession._id,
   });
-  
+
   if (!assignment) {
     throw new Error(
       "Not authorized to mark attendance for this course"
     );
   }
-  // 4. Validate date
+
+  // 5. Validate date
   const attendanceDate = new Date(dateTime);
   if (isNaN(attendanceDate.getTime())) {
     throw new Error("Invalid attendance date");
   }
 
-  // 5. Upsert: if attendance was already recorded for this
+  // 6. Upsert: if attendance was already recorded for this
   // enrollment/date, correct its status instead of rejecting the
   // request — this lets a lecturer fix a mis-tap on the same day.
   const attendance = await Attendance.findOneAndUpdate(

@@ -27,11 +27,31 @@ const academicSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {
     timestamps: true,
+  }
+);
+
+academicSchema.pre("validate", function () {
+  if (
+    this.startDate &&
+    this.endDate &&
+    this.endDate <= this.startDate
+  ) {
+    this.invalidate(
+      "endDate",
+      "End date must be later than start date."
+    );
+  }
+});
+
+academicSchema.index(
+  { isActive: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isActive: true },
   }
 );
 

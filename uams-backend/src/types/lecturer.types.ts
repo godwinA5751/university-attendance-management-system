@@ -8,9 +8,9 @@ export interface CreateLecturerInput{
 }
 
 export interface UpdateLecturerInput {
-  firstName: string;
+  firstName?: string;
   middleName?: string | undefined;
-  lastName: string;
-  department: string;
-  faculty: string;
+  lastName?: string;
+  department?: string;
+  faculty?: string;
 }

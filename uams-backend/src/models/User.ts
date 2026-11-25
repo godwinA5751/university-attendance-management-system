@@ -38,7 +38,10 @@ const userSchema = new mongoose.Schema<IUser>(
     email: {
       type: String,
       unique: true,
-      sparse: true, // allows students/lecturers without email if needed
+      sparse: true,
+      trim: true,
+      lowercase: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
 
     password: {
@@ -70,16 +73,16 @@ const userSchema = new mongoose.Schema<IUser>(
 );
 
 userSchema.pre("save", async function () {
-  const user = this as any;
-
-  if (!user.isModified("password")) return;
+  if (!this.isModified("password")) return;
 
   const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(user.password, salt);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-userSchema.methods.comparePassword = async function (enteredPassword: string) {
-  return await bcrypt.compare(enteredPassword, this.password);
+userSchema.methods.comparePassword = function (
+  enteredPassword: string
+) {
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 userSchema.set("toJSON", {

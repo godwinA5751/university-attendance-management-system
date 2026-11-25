@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import type { CreateCourseEnrollmentInput } from "../types/courseEnrollment.types.js";
 import { Student } from "../models/Student.js";
@@ -5,54 +6,55 @@ import { Course } from "../models/Course.js";
 import { Attendance } from "../models/Attendance.js";
 
 export const createCourseEnrollment = async (
-  input: CreateCourseEnrollmentInput
+  input: CreateCourseEnrollmentInput,
+  session?: mongoose.ClientSession
 ) => {
   const { studentId, courseId } = input;
 
-  // 1. Verify student exists
-  const student = await Student.findById(studentId);
+  const student = await Student.findById(studentId).session(session ?? null);
+
   if (!student) {
     throw new Error("Student not found");
   }
 
-  // 2. Verify course exists
-  const course = await Course.findById(courseId);
+  const course = await Course.findById(courseId).session(session ?? null);
+
   if (!course) {
     throw new Error("Course not found");
   }
 
-  // 4. Prevent duplicate enrollment (VERY IMPORTANT)
+  if (student.curriculumId.toString() !== course.curriculumId.toString()) {
+    throw new Error("Student and course belong to different curricula");
+  }
+
   const existingEnrollment = await CourseEnrollment.findOne({
     studentId,
     courseId,
-  });
+  }).session(session ?? null);
 
   if (existingEnrollment) {
-    throw new Error("Student already enrolled in this course for this session");
+    throw new Error(
+      "Student already enrolled in this course for this curriculum"
+    );
   }
 
-  // 5. Create enrollment
   const enrollment = new CourseEnrollment({
     studentId,
     courseId,
     status: "active",
   });
 
-  await enrollment.save();
+  await enrollment.save(session ? { session } : {});
 
   return enrollment;
 };
-/**
- * Returns active enrollments for a course, populated with student
- * name/matric, for use on the lecturer's "take attendance" screen.
- * Optionally reports whether each student already has an attendance
- * record for the given date.
- */
+
 export const getEnrollmentsForCourse = async (
   courseId: string,
   dateTime?: string
 ) => {
   const course = await Course.findById(courseId);
+
   if (!course) {
     throw new Error("Course not found");
   }
@@ -74,6 +76,7 @@ export const getEnrollmentsForCourse = async (
     const day = new Date(dateTime);
     const startOfDay = new Date(day);
     startOfDay.setHours(0, 0, 0, 0);
+
     const endOfDay = new Date(day);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -85,7 +88,10 @@ export const getEnrollmentsForCourse = async (
     });
 
     markedMap = new Map(
-      records.map((r) => [r.enrollmentId.toString(), r.status])
+      records.map((r) => [
+        r.enrollmentId.toString(),
+        r.status,
+      ])
     );
   }
 

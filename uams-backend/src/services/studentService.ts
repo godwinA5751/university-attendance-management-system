@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import type { CreateStudentInput } from "../types/student.types.js";
 
 import { User } from "../models/User.js";
@@ -6,10 +7,108 @@ import { Curriculum } from "../models/Curriculum.js";
 
 import {
   enrollStudentIntoLevelCourses,
+  syncStudentEnrollmentsAfterAdminUpdate,
 } from "./enrollmentSyncService.js";
 
 import { Attendance } from "../models/Attendance.js";
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
+
+const VALID_LEVELS = [100, 200, 300, 400, 500, 600];
+
+const validateStudentInput = (
+  data: Partial<CreateStudentInput>,
+  isCreate = false
+) => {
+  const requiredFields = [
+    "firstName",
+    "lastName",
+    "matricNumber",
+    "department",
+    "faculty",
+    "currentLevel",
+    "admissionYear",
+    "curriculumId",
+  ] as const;
+
+  if (isCreate) {
+    for (const field of requiredFields) {
+      if (data[field] === undefined || data[field] === null || data[field] === "") {
+        throw new Error(`${field} is required`);
+      }
+    }
+  }
+
+  const stringFields = [
+    "firstName",
+    "middleName",
+    "lastName",
+    "matricNumber",
+    "department",
+    "faculty",
+  ] as const;
+
+  for (const field of stringFields) {
+    const value = data[field];
+
+    if (value !== undefined && typeof value !== "string") {
+      throw new Error(`${field} must be a string`);
+    }
+
+    if (
+      field !== "middleName" &&
+      value !== undefined &&
+      !value.trim()
+    ) {
+      throw new Error(`${field} cannot be empty`);
+    }
+  }
+
+  if (
+    data.currentLevel !== undefined &&
+    (!Number.isInteger(data.currentLevel) ||
+      !VALID_LEVELS.includes(data.currentLevel))
+  ) {
+    throw new Error("Invalid student level");
+  }
+
+  if (
+    data.admissionYear !== undefined &&
+    (!Number.isInteger(data.admissionYear) ||
+      data.admissionYear < 2000)
+  ) {
+    throw new Error("Invalid admission year");
+  }
+
+  if (
+    data.curriculumId !== undefined &&
+    !mongoose.Types.ObjectId.isValid(data.curriculumId)
+  ) {
+    throw new Error("Invalid curriculum ID");
+  }
+
+  if (data.carryOverCourseIds !== undefined) {
+    if (!Array.isArray(data.carryOverCourseIds)) {
+      throw new Error("Carryover course IDs must be an array");
+    }
+
+    if (
+      data.carryOverCourseIds.some(
+        (id) =>
+          typeof id !== "string" ||
+          !mongoose.Types.ObjectId.isValid(id)
+      )
+    ) {
+      throw new Error("One or more carryover course IDs are invalid");
+    }
+
+    if (
+      new Set(data.carryOverCourseIds).size !==
+      data.carryOverCourseIds.length
+    ) {
+      throw new Error("Duplicate carryover course IDs are not allowed");
+    }
+  }
+};
 
 export const createStudent = async (
   data: CreateStudentInput
@@ -27,68 +126,80 @@ export const createStudent = async (
     carryOverCourseIds = [],
   } = data;
 
-  const existingStudent =
-    await Student.findOne({
-      matricNumber,
-    });
+  validateStudentInput(data, true);
+
+  const existingStudent = await Student.findOne({
+    matricNumber,
+  });
 
   if (existingStudent) {
-    throw new Error(
-      "Matric number already exists"
-    );
+    throw new Error("Matric number already exists");
   }
 
-  const curriculum =
-    await Curriculum.findById(
-      curriculumId
-    );
+  const curriculum = await Curriculum.findById(
+    curriculumId
+  );
 
   if (!curriculum) {
-    throw new Error(
-      "Curriculum not found"
-    );
+    throw new Error("Curriculum not found");
   }
 
-  if (!process.env.DEFAULT_PASSWORD) {
-    throw new Error(
-      "DEFAULT_PASSWORD is not configured"
-    );
+  const defaultPassword = process.env.DEFAULT_PASSWORD;
+
+  if (!defaultPassword) {
+    throw new Error("DEFAULT_PASSWORD is not configured");
   }
 
-  const user = new User({
-    firstName,
-    middleName,
-    lastName,
-    password: process.env.DEFAULT_PASSWORD,
-    role: "student",
-    mustChangePassword: true,
-  });
+  const mongoSession = await mongoose.startSession();
 
-  await user.save();
+  try {
+    const result = await mongoSession.withTransaction(
+      async () => {
+        const user = new User({
+          firstName,
+          ...(middleName !== undefined ? { middleName } : {}),
+          lastName,
+          password: defaultPassword,
+          role: "student",
+          mustChangePassword: true,
+        });
 
-  const student = new Student({
-    userId: user._id,
-    matricNumber,
-    department,
-    faculty,
-    currentLevel,
-    admissionYear,
-    curriculumId,
-  });
+        await user.save({ session: mongoSession });
 
-  await student.save();
+        const student = new Student({
+          userId: user._id,
+          matricNumber,
+          department,
+          faculty,
+          currentLevel,
+          admissionYear,
+          curriculumId,
+        });
 
-  await enrollStudentIntoLevelCourses({
-    studentId: student._id.toString(),
-    level: currentLevel,
-    curriculumId,
-    carryOverCourseIds,
-  });
+        await student.save({ session: mongoSession });
 
-  return {
-    user,
-    student,
-  };
+        await enrollStudentIntoLevelCourses({
+          studentId: student._id.toString(),
+          level: currentLevel,
+          curriculumId,
+          carryOverCourseIds,
+          maxCarryOverLevel: currentLevel - 100,
+          requirePreviousEnrollment: false,
+          session: mongoSession,
+        });
+
+        return { user, student };
+      }
+    );
+
+    if (!result) {
+      throw new Error("Student creation transaction failed");
+    }
+
+    return result;
+  } finally {
+    await mongoSession.endSession();
+  }
 };
 
 export const getStudentProfile = async (
@@ -133,9 +244,9 @@ export const getStudents = async ({
   level,
   curriculumId,
 }: GetStudentsInput) => {
-  const filter: any = {};
+  const filter: Record<string, any> = {};
 
-  if (level) {
+  if (level !== undefined) {
     filter.currentLevel = level;
   }
 
@@ -143,104 +254,61 @@ export const getStudents = async ({
     filter.curriculumId = curriculumId;
   }
 
-  let students = await Student.find(filter)
-    .populate({
-      path: "userId",
-      select: "firstName middleName lastName",
-    })
-    .sort({
-      createdAt: -1,
-    });
+  const keyword = search.trim();
 
-  if (search) {
-    const keyword =
-      search.toLowerCase();
-
-    students = students.filter(
-      (student: any) => {
-        const user = student.userId;
-
-        return (
-          `${user.firstName} ${user.middleName || ''} ${user.lastName}`
-            .toLowerCase()
-            .includes(keyword) ||
-          student.matricNumber
-            .toLowerCase()
-            .includes(keyword)
-        );
-      }
+  if (keyword) {
+    const escapedKeyword = keyword.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
     );
+
+    const regex = new RegExp(escapedKeyword, "i");
+
+    const matchingUsers = await User.find({
+      $or: [
+        { firstName: regex },
+        { middleName: regex },
+        { lastName: regex },
+      ],
+    }).select("_id");
+
+    filter.$or = [
+      { matricNumber: regex },
+      { userId: { $in: matchingUsers.map((user) => user._id) } },
+    ];
   }
 
-  if (curriculumId) {
-    const studentIds =
-      students.map(
-        (student) => student._id
-      );
+  const [students, total] = await Promise.all([
+    Student.find(filter)
+      .populate({
+        path: "userId",
+        select: "firstName middleName lastName",
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
 
-    const enrollments =
-      await CourseEnrollment.find({
-        studentId: {
-          $in: studentIds,
-        }
-      }).distinct("studentId");
-
-    students = students.filter(
-      (student) =>
-        enrollments.some(
-          (id) =>
-            id.toString() ===
-            student._id.toString()
-        )
-    );
-  }
-
-  const total =
-    students.length;
-
-  const start =
-    (page - 1) * limit;
-
-  const end =
-    start + limit;
-
-  const paginatedStudents =
-    students.slice(
-      start,
-      end
-    );
+    Student.countDocuments(filter),
+  ]);
 
   return {
-    data: paginatedStudents.map(
-      (student: any) => ({
-        _id: student._id,
-        firstName:
-          student.userId.firstName,
-        middleName:
-          student.userId.middleName,
-        lastName:
-          student.userId.lastName,
-        matricNumber:
-          student.matricNumber,
-        department:
-          student.department,
-        faculty:
-          student.faculty,
-        currentLevel:
-          student.currentLevel,
-        admissionYear:
-          student.admissionYear,
-        curriculumId:
-          student.curriculumId,
-      })
-    ),
-
+    data: students.map((student: any) => ({
+      _id: student._id,
+      firstName: student.userId.firstName,
+      middleName: student.userId.middleName,
+      lastName: student.userId.lastName,
+      matricNumber: student.matricNumber,
+      department: student.department,
+      faculty: student.faculty,
+      currentLevel: student.currentLevel,
+      admissionYear: student.admissionYear,
+      curriculumId: student.curriculumId,
+    })),
     pagination: {
       page,
       limit,
       total,
-      totalPages:
-        Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
     },
   };
 };
@@ -271,131 +339,189 @@ export const updateStudent = async (
   studentId: string,
   data: Partial<CreateStudentInput>
 ) => {
-  const student = await Student.findById(
-   studentId
-  );
+  validateStudentInput(data);
 
-  if (!student) {
-    throw new Error(
-    "Student not found"
-    );
-  }
+  const mongoSession = await mongoose.startSession();
 
-  if (data.curriculumId) {
-    const curriculum =
-      await Curriculum.findById(
-      data.curriculumId
-    );
+  try {
+    const result = await mongoSession.withTransaction(async () => {
+      const student = await Student.findById(studentId)
+        .session(mongoSession);
 
-    if (!curriculum) {
-      throw new Error(
-        "Curriculum not found"
-      );
+      if (!student) {
+        throw new Error("Student not found");
+      }
+
+      const previousLevel = student.currentLevel;
+      const newLevel = data.currentLevel ?? previousLevel;
+      const levelChanged = newLevel !== previousLevel;
+
+      // Validate curriculum changes.
+      if (
+        data.curriculumId !== undefined &&
+        data.curriculumId !== student.curriculumId.toString()
+      ) {
+        const curriculum = await Curriculum.findById(
+          data.curriculumId
+        ).session(mongoSession);
+
+        if (!curriculum) {
+          throw new Error("Curriculum not found");
+        }
+
+        const existingEnrollment = await CourseEnrollment.exists({
+          studentId: student._id,
+        }).session(mongoSession);
+
+        if (existingEnrollment) {
+          throw new Error(
+            "Cannot change a student's curriculum while course enrollments exist."
+          );
+        }
+
+        student.curriculumId = curriculum._id;
+      }
+
+      // Update User.
+      const user = await User.findById(student.userId)
+        .session(mongoSession);
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (data.firstName !== undefined) {
+        user.firstName = data.firstName;
+      }
+
+      if (data.middleName !== undefined) {
+        user.middleName = data.middleName;
+      }
+
+      if (data.lastName !== undefined) {
+        user.lastName = data.lastName;
+      }
+
+      await user.save({ session: mongoSession });
+
+      // Update Student.
+      if (data.matricNumber !== undefined) {
+        student.matricNumber = data.matricNumber;
+      }
+
+      if (data.department !== undefined) {
+        student.department = data.department;
+      }
+
+      if (data.faculty !== undefined) {
+        student.faculty = data.faculty;
+      }
+
+      student.currentLevel = newLevel;
+
+      if (data.admissionYear !== undefined) {
+        student.admissionYear = data.admissionYear;
+      }
+
+      await student.save({ session: mongoSession });
+
+      // Synchronize enrollments when the level changes
+      // or when carryover courses are explicitly supplied.
+      if (
+        levelChanged ||
+        data.carryOverCourseIds !== undefined
+      ) {
+        await syncStudentEnrollmentsAfterAdminUpdate({
+          studentId: student._id.toString(),
+          level: newLevel,
+          curriculumId: student.curriculumId.toString(),
+          ...(data.carryOverCourseIds !== undefined
+            ? { carryOverCourseIds: data.carryOverCourseIds }
+            : {}),
+          levelChanged,
+          session: mongoSession,
+        });
+      }
+
+      return student._id;
+    });
+
+    if (!result) {
+      throw new Error("Student update transaction failed");
     }
 
+    const updatedStudent = await Student.findById(result)
+      .populate({
+        path: "userId",
+        select: "firstName middleName lastName",
+      })
+      .populate("curriculumId");
+
+    if (!updatedStudent) {
+      throw new Error("Student not found after update");
+    }
+
+    return updatedStudent;
+  } finally {
+    await mongoSession.endSession();
   }
-
-  // Update User fields
-  const user = await User.findById(
-    student.userId
-  );
-
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  if (data.firstName !== undefined) {
-    user.firstName = data.firstName;
-  }
-
-  if (data.middleName !== undefined) {
-    user.middleName = data.middleName;
-  }
-
-  if (data.lastName !== undefined) {
-    user.lastName = data.lastName;
-  }
-
-  await user.save();
-
-  // Update Student fields
-  if (data.matricNumber !== undefined) {
-    student.matricNumber = data.matricNumber;
-  }
-
-  if (data.department !== undefined) {
-    student.department = data.department;
-  }
-
-  if (data.faculty !== undefined) {
-    student.faculty = data.faculty;
-  }
-
-  if (data.currentLevel !== undefined) {
-    student.currentLevel = data.currentLevel;
-  }
-
-  if (data.admissionYear !== undefined) {
-    student.admissionYear = data.admissionYear;
-  }
-
-  if (data.curriculumId !== undefined) {
-    student.curriculumId =
-    data.curriculumId as any;
-  }
-
-  await student.save();
-
-  return student
-    .populate({
-      path: "userId",
-      select:
-      "firstName middleName lastName",
-    })
-      .then((result) =>
-      result.populate("curriculumId")
-    );
 };
-
 
 export const deleteStudent = async (
   studentId: string
 ) => {
-  const student =
-    await Student.findById(
-      studentId
-    );
+  const mongoSession = await mongoose.startSession();
 
-  if (!student) {
-    throw new Error(
-      "Student not found"
-    );
-  }
+  try {
+    const result = await mongoSession.withTransaction(async () => {
+      const student = await Student.findById(studentId)
+        .session(mongoSession);
 
-  const enrollments =
-    await CourseEnrollment.find({
-      studentId: student._id,
+      if (!student) {
+        throw new Error("Student not found");
+      }
+
+      const enrollments = await CourseEnrollment.find({
+        studentId: student._id,
+      })
+        .select("_id")
+        .session(mongoSession);
+
+      const enrollmentIds = enrollments.map(
+        (enrollment) => enrollment._id
+      );
+
+      const attendanceExists = await Attendance.exists({
+        enrollmentId: { $in: enrollmentIds },
+      }).session(mongoSession);
+
+      if (attendanceExists) {
+        throw new Error(
+          "Cannot delete a student with attendance records."
+        );
+      }
+
+      await CourseEnrollment.deleteMany(
+        { studentId: student._id },
+        { session: mongoSession }
+      );
+
+      await User.findByIdAndDelete(
+        student.userId,
+        { session: mongoSession }
+      );
+
+      await student.deleteOne({ session: mongoSession });
+
+      return { message: "Student deleted successfully" };
     });
 
-  const enrollmentIds =
-    enrollments.map(
-      (enrollment) =>
-        enrollment._id
-    );
+    if (!result) {
+      throw new Error("Student deletion transaction failed");
+    }
 
-  await Attendance.deleteMany({
-    enrollmentId: {
-      $in: enrollmentIds,
-    },
-  });
-
-  await CourseEnrollment.deleteMany({
-    studentId: student._id,
-  });
-
-  await User.findByIdAndDelete(
-    student.userId
-  );
-
-  await student.deleteOne();
+    return result;
+  } finally {
+    await mongoSession.endSession();
+  }
 };

@@ -7,17 +7,20 @@ const courseSchema = new mongoose.Schema(
       required: true,
       uppercase: true,
       trim: true,
+      minlength: 3,
     },
-    
+
     courseTitle: {
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
     },
     
     unit: {
       type: Number,
       required: true,
+      min: 1,
     },
 
     semester: {

@@ -8,6 +8,7 @@ import {
   openAttendanceSession,
   closeAttendanceSession,
   cancelAttendanceSession,
+  getAttendanceSessionQrToken
 } from "../services/attendanceSessionService.js";
 
 const getLecturerId = async (userId: string) => {
@@ -165,6 +166,27 @@ export const cancelAttendanceSessionController = async (
     return res.status(200).json({
       message: "Attendance session cancelled successfully",
       session,
+    });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+export const getAttendanceSessionQrTokenController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const lecturerId = await getLecturerId(req.user!.id);
+
+    const result = await getAttendanceSessionQrToken(
+      req.params.sessionId as string,
+      lecturerId
+    );
+
+    return res.status(200).json({
+      message: "QR attendance token generated successfully",
+      ...result,
     });
   } catch (error) {
     return handleError(res, error);

@@ -1,6 +1,9 @@
 
 import express from "express";
-import { createAttendanceController } from "../controllers/attendanceController.js";
+import {
+  createAttendanceController,
+  submitQrAttendanceController,
+} from "../controllers/attendanceController.js";
 import { getStudentAttendanceController } from "../controllers/studentController.js";
 import { getCourseAttendanceController } from "../controllers/courseController.js";
 import { getEnrollmentAttendanceController } from "../controllers/courseEnrollmentController.js";
@@ -37,6 +40,14 @@ router.post(
   verifyJWT,
   authorize(["lecturer"]),
   createAttendanceController
+);
+
+// Student submits QR attendance
+router.post(
+  "/qr",
+  verifyJWT,
+  authorize(["student"]),
+  submitQrAttendanceController
 );
 
 export default router;

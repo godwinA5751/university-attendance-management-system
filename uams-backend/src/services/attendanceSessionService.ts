@@ -11,6 +11,7 @@ import type {
   CreateAttendanceSessionInput,
   UpdateAttendanceSessionInput,
 } from "../types/attendance.types.js";
+import { generateQrAttendanceToken } from "../utils/qrAttendanceToken.js";
 
 const validateSchedule = (start: Date, end: Date) => {
   if (
@@ -440,4 +441,35 @@ export const cancelAttendanceSession = async (
   await session.save();
 
   return session;
+};
+
+export const getAttendanceSessionQrToken = (
+  sessionId: string,
+  lecturerId: string
+) => {
+  if (!mongoose.isValidObjectId(sessionId)) {
+    throw new Error("Invalid attendance session ID");
+  }
+
+  const session = AttendanceSession.findOne({
+    _id: sessionId,
+    lecturerId,
+    status: "open",
+  });
+
+  return session.then((attendanceSession) => {
+    if (!attendanceSession) {
+      throw new Error("Open attendance session not found");
+    }
+
+    if (
+      !["self_service", "both"].includes(
+        attendanceSession.attendanceMethod
+      )
+    ) {
+      throw new Error("QR attendance is not enabled for this session");
+    }
+
+    return generateQrAttendanceToken(sessionId);
+  });
 };

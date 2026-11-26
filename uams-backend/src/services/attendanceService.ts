@@ -6,6 +6,9 @@ import type { RecordManualAttendanceInput } from "../types/attendance.types.js";
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+import { Student } from "../models/Student.js";
+import { verifyQrAttendanceToken } from "../utils/qrAttendanceToken.js";
+import type { SubmitQrAttendanceInput } from "../types/attendance.types.js";
 
 export const getAttendanceByStudent = async (studentId: string) => {
   const enrollments = await CourseEnrollment.find({ studentId });
@@ -247,4 +250,90 @@ export const getLecturerAttendanceReport = async (userId: string) => {
   );
 
   return reports;
+};
+
+export const submitQrAttendance = async (
+  input: SubmitQrAttendanceInput,
+  userId: string
+) => {
+  if (
+    !input ||
+    typeof input.token !== "string" ||
+    !input.token.trim()
+  ) {
+    throw new Error("QR attendance token is required");
+  }
+
+  const { sessionId } = verifyQrAttendanceToken(input.token);
+
+  const student = await Student.findOne({ userId }).select("_id");
+
+  if (!student) {
+    throw new Error("Student profile not found");
+  }
+
+  const mongoSession = await mongoose.startSession();
+
+  try {
+    let result: any = null;
+
+    await mongoSession.withTransaction(async () => {
+      const attendanceSession = await AttendanceSession.findOneAndUpdate(
+  {
+    _id: sessionId,
+    status: "open",
+          attendanceMethod: { $in: ["self_service", "both"] },
+        },
+        {
+          $inc: { attendanceVersion: 1 },
+        },
+        {
+          new: true,
+          session: mongoSession,
+        }
+      );
+
+      if (!attendanceSession) {
+        throw new Error(
+          "Attendance session is closed or QR attendance is not enabled"
+        );
+      }
+
+      const enrollment = await CourseEnrollment.findOne({
+        studentId: student._id,
+        courseId: attendanceSession.courseId,
+        academicSessionId: attendanceSession.academicSessionId,
+        status: "active",
+      }).session(mongoSession);
+
+      if (!enrollment) {
+        throw new Error("Active course enrollment not found");
+      }
+
+      const recordedAt = new Date();
+
+      result = await Attendance.create(
+        [
+          {
+            attendanceSessionId: attendanceSession._id,
+            enrollmentId: enrollment._id,
+            studentId: student._id,
+            dateTime: recordedAt,
+            status: "present",
+            method: "self_service",
+            recordedBy: null,
+            recordedAt,
+            manualReason: null,
+          },
+        ],
+        { session: mongoSession }
+      );
+
+      result = result[0];
+    });
+
+    return result;
+  } finally {
+    await mongoSession.endSession();
+  }
 };

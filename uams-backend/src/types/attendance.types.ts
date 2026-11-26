@@ -1,6 +1,9 @@
 export type AttendanceStatus = "present" | "absent" | "late";
 
-export type AttendanceMethod = "manual" | "self_service";
+export type AttendanceMethod =
+  | "manual"
+  | "self_service"
+  | "system";
 
 export type SessionAttendanceMethod =
   | "manual"
@@ -26,6 +29,10 @@ export interface RecordManualAttendanceInput {
   enrollmentId: string;
   status: AttendanceStatus;
   reason?: string;
+}
+
+export interface SubmitQrAttendanceInput {
+  token: string;
 }
 
 export interface UpdateAttendanceSessionInput {

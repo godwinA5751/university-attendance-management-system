@@ -1,8 +1,15 @@
+import mongoose from "mongoose";
 import type { Request, Response } from "express";
-import { createCourseEnrollment, getEnrollmentsForCourse } from "../services/courseEnrollmentService.js";
+
+import {
+  createCourseEnrollment,
+  getEnrollmentsForCourse,
+} from "../services/courseEnrollmentService.js";
+
 import { getAttendanceByEnrollment } from "../services/attendanceService.js";
 import { Lecturer } from "../models/Lecturer.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
+import type { CreateCourseEnrollmentInput } from "../types/courseEnrollment.types.js";
 
 export const getCourseEnrollmentsController = async (
   req: Request,
@@ -10,7 +17,28 @@ export const getCourseEnrollmentsController = async (
 ) => {
   try {
     const courseId = req.params.courseId as string;
-    const { date } = req.query;
+    const academicSessionId = req.query.academicSessionId as string;
+    const attendanceSessionId = req.query.attendanceSessionId as
+      | string
+      | undefined;
+
+    if (
+      !mongoose.isValidObjectId(courseId) ||
+      !mongoose.isValidObjectId(academicSessionId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid course or academic session ID",
+      });
+    }
+
+    if (
+      attendanceSessionId &&
+      !mongoose.isValidObjectId(attendanceSessionId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid attendance session ID",
+      });
+    }
 
     if (req.user!.role === "lecturer") {
       const lecturer = await Lecturer.findOne({
@@ -26,18 +54,20 @@ export const getCourseEnrollmentsController = async (
       const isAssigned = await CourseAssignment.exists({
         courseId,
         lecturerId: lecturer._id,
+        academicSessionId,
       });
 
       if (!isAssigned) {
         return res.status(403).json({
-          message: "Not authorized for this course",
+          message: "Not authorized for this course and academic session",
         });
       }
     }
 
     const students = await getEnrollmentsForCourse(
       courseId,
-      date as string | undefined
+      academicSessionId,
+      attendanceSessionId
     );
 
     return res.status(200).json({
@@ -45,16 +75,18 @@ export const getCourseEnrollmentsController = async (
       data: students,
     });
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "Course not found"
-    ) {
-      return res.status(404).json({ message: error.message });
+    const message =
+      error instanceof Error ? error.message : "Server error";
+
+    if (message.includes("not found")) {
+      return res.status(404).json({ message });
     }
 
-    return res.status(500).json({
-      message: error instanceof Error ? error.message : "Server error",
-    });
+    if (message.includes("Invalid") || message.includes("required")) {
+      return res.status(400).json({ message });
+    }
+
+    return res.status(500).json({ message });
   }
 };
 
@@ -72,9 +104,14 @@ export const getEnrollmentAttendanceController = async (
       data: attendance,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: error instanceof Error ? error.message : "Server error",
-    });
+    const message =
+      error instanceof Error ? error.message : "Server error";
+
+    if (message.includes("Invalid")) {
+      return res.status(400).json({ message });
+    }
+
+    return res.status(500).json({ message });
   }
 };
 
@@ -83,42 +120,46 @@ export const createCourseEnrollmentController = async (
   res: Response
 ) => {
   try {
-    const enrollment = await createCourseEnrollment(req.body);
+    const input: CreateCourseEnrollmentInput = {
+      studentId: req.body.studentId,
+      courseId: req.body.courseId,
+      academicSessionId: req.body.academicSessionId,
+    };
+
+    const enrollment = await createCourseEnrollment(input);
 
     return res.status(201).json({
       message: "Student enrolled successfully",
       data: enrollment,
     });
   } catch (error) {
-    if (error instanceof Error) {
-      // Not found errors
-      if (
-        error.message === "Student not found" ||
-        error.message === "Course not found" ||
-        error.message === "Academic session not found"
-      ) {
-        return res.status(404).json({
-          message: error.message,
-        });
-      }
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
 
-      // Duplicate enrollment
-      if (
-        error.message ===
-        "Student already enrolled in this course for this session"
-      ) {
-        return res.status(409).json({
-          message: error.message,
-        });
-      }
-
-      return res.status(500).json({
-        message: error.message,
-      });
+    if (
+      message === "Student not found" ||
+      message === "Course not found" ||
+      message === "Academic session not found"
+    ) {
+      return res.status(404).json({ message });
     }
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    if (
+      message.includes("already enrolled") ||
+      message.includes("duplicate")
+    ) {
+      return res.status(409).json({ message });
+    }
+
+    if (
+      message.includes("Invalid") ||
+      message.includes("required") ||
+      message.includes("different curricula") ||
+      message.includes("not active")
+    ) {
+      return res.status(400).json({ message });
+    }
+
+    return res.status(500).json({ message });
   }
 };

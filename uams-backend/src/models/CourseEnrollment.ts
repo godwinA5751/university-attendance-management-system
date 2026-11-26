@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const courseEnrollmentSchema = new mongoose.Schema(
@@ -14,6 +15,12 @@ const courseEnrollmentSchema = new mongoose.Schema(
       required: true,
     },
 
+    academicSessionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicSession",
+      required: true,
+    },
+
     status: {
       type: String,
       enum: ["active", "dropped", "completed"],
@@ -25,10 +32,13 @@ const courseEnrollmentSchema = new mongoose.Schema(
   }
 );
 
+// A student can enroll in the same course again
+// in a different academic session.
 courseEnrollmentSchema.index(
   {
     studentId: 1,
     courseId: 1,
+    academicSessionId: 1,
   },
   {
     unique: true,

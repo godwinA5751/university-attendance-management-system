@@ -5,6 +5,7 @@ import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 import { enrollExistingStudentsIntoCourse } from "./enrollmentSyncService.js";
 
 export const getAllCourses = async (
@@ -99,44 +100,68 @@ export const createCourse = async (input: CreateCourseInput) => {
     level,
     curriculumId,
   } = input;
-  
-  const curriculum = await Curriculum.findById(
-    curriculumId
-  );
-  
-  if (!curriculum) {
-    throw new Error("Curriculum not found");
+
+  const mongoSession = await mongoose.startSession();
+
+  try {
+    const result = await mongoSession.withTransaction(async () => {
+      const curriculum = await Curriculum.findById(
+        curriculumId
+      ).session(mongoSession);
+
+      if (!curriculum) {
+        throw new Error("Curriculum not found");
+      }
+
+      const academicSession = await AcademicSession.findOne({
+        isActive: true,
+      }).session(mongoSession);
+
+      if (!academicSession) {
+        throw new Error("No active academic session found");
+      }
+
+      const existingCourse = await Course.findOne({
+        courseCode,
+        curriculumId,
+      }).session(mongoSession);
+
+      if (existingCourse) {
+        throw new Error(
+          "Course already exists for this curriculum"
+        );
+      }
+
+      const course = new Course({
+        courseCode,
+        courseTitle,
+        unit,
+        semester,
+        level,
+        curriculumId,
+      });
+
+      await course.save({ session: mongoSession });
+
+      await enrollExistingStudentsIntoCourse({
+        courseId: course._id.toString(),
+        level: course.level,
+        curriculumId: course.curriculumId.toString(),
+        academicSessionId: academicSession._id.toString(),
+        session: mongoSession,
+      });
+
+      return course;
+    });
+
+    if (!result) {
+      throw new Error("Course creation transaction failed");
+    }
+
+    return result;
+  } finally {
+    await mongoSession.endSession();
   }
-  
-  const existingCourse = await Course.findOne({
-    courseCode,
-    curriculumId,
-  });
-  
-  if (existingCourse) {
-    throw new Error(
-      "Course already exists for this curriculum"
-    );
-  }
-  
-  const course = new Course({
-    courseCode,
-    courseTitle,
-    unit,
-    semester,
-    level,
-    curriculumId,
-  });
-  
-  await course.save();
-  
-  await enrollExistingStudentsIntoCourse({
-    courseId: course._id.toString(),
-    level: course.level,
-    curriculumId: course.curriculumId.toString(),
-  });
-  
-  return course;
 };
 
 export const updateCourse = async (

@@ -4,6 +4,7 @@ import type { CreateStudentInput } from "../types/student.types.js";
 import { User } from "../models/User.js";
 import { Student } from "../models/Student.js";
 import { Curriculum } from "../models/Curriculum.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 
 import {
   enrollStudentIntoLevelCourses,
@@ -155,6 +156,13 @@ export const createStudent = async (
   try {
     const result = await mongoSession.withTransaction(
       async () => {
+        const academicSession = await AcademicSession.findOne({
+          isActive: true,
+        }).session(mongoSession);
+
+        if (!academicSession) {
+          throw new Error("No active academic session found");
+        }
         const user = new User({
           firstName,
           ...(middleName !== undefined ? { middleName } : {}),
@@ -182,6 +190,7 @@ export const createStudent = async (
           studentId: student._id.toString(),
           level: currentLevel,
           curriculumId,
+          academicSessionId: academicSession._id.toString(),
           carryOverCourseIds,
           maxCarryOverLevel: currentLevel - 100,
           requirePreviousEnrollment: false,
@@ -431,10 +440,19 @@ export const updateStudent = async (
         levelChanged ||
         data.carryOverCourseIds !== undefined
       ) {
+        const academicSession = await AcademicSession.findOne({
+          isActive: true,
+        }).session(mongoSession);
+
+        if (!academicSession) {
+          throw new Error("No active academic session found");
+        }
+
         await syncStudentEnrollmentsAfterAdminUpdate({
           studentId: student._id.toString(),
           level: newLevel,
           curriculumId: student.curriculumId.toString(),
+          academicSessionId: academicSession._id.toString(),
           ...(data.carryOverCourseIds !== undefined
             ? { carryOverCourseIds: data.carryOverCourseIds }
             : {}),

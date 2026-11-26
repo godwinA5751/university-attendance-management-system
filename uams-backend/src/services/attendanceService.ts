@@ -1,20 +1,20 @@
+import mongoose from "mongoose";
+import { AttendanceSession } from "../models/AttendanceSession.js";
+import { AcademicSession } from "../models/AcademicSession.js";
+import { Lecturer } from "../models/Lecturer.js";
+import type { RecordManualAttendanceInput } from "../types/attendance.types.js";
 import { CourseEnrollment } from "../models/CourseEnrollment.js";
 import { Attendance } from "../models/Attendance.js";
-import type { CreateAttendanceInput } from "../types/attendance.types.js";
-import { Course } from "../models/Course.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
-import { AcademicSession } from "../models/AcademicSession.js";
 
 export const getAttendanceByStudent = async (studentId: string) => {
   const enrollments = await CourseEnrollment.find({ studentId });
 
   const enrollmentIds = enrollments.map((e) => e._id);
 
-  const attendance = await Attendance.find({
+  return Attendance.find({
     enrollmentId: { $in: enrollmentIds },
   });
-
-  return attendance;
 };
 
 export const getAttendanceByCourse = async (courseId: string) => {
@@ -22,150 +22,229 @@ export const getAttendanceByCourse = async (courseId: string) => {
 
   const enrollmentIds = enrollments.map((e) => e._id);
 
-  const attendance = await Attendance.find({
+  return Attendance.find({
     enrollmentId: { $in: enrollmentIds },
   });
-
-  return attendance;
 };
 
 export const getAttendanceByEnrollment = async (enrollmentId: string) => {
-  const attendance = await Attendance.find({ enrollmentId });
+  if (!mongoose.isValidObjectId(enrollmentId)) {
+    throw new Error("Invalid enrollment ID");
+  }
 
-  return attendance;
+  return Attendance.find({ enrollmentId });
 };
 
-export const createAttendance = async (input: CreateAttendanceInput, lecturerId: string) => {
-  const { enrollmentId, dateTime, status } = input;
+export const createAttendance = async (
+  input: RecordManualAttendanceInput,
+  lecturerId: string
+) => {
+  const { attendanceSessionId, enrollmentId, status, reason } = input;
 
-  // 1. Check enrollment
-  const enrollment = await CourseEnrollment.findById(enrollmentId);
-  if (!enrollment) throw new Error("Enrollment not found");
-
-  if (enrollment.status !== "active") {
-    throw new Error("Cannot record attendance for inactive enrollment");
+  if (
+    !mongoose.isValidObjectId(attendanceSessionId) ||
+    !mongoose.isValidObjectId(enrollmentId)
+  ) {
+    throw new Error("Invalid attendance session or enrollment ID");
   }
 
-  // 2. Check course
-  const course = await Course.findById(enrollment.courseId);
-  if (!course) {
-    throw new Error("Course not found");
-  }
-  
-  
-  // 3. Get active academic session
-  const activeSession = await AcademicSession.findOne({
-    isActive: true,
-  });
+  const allowedStatuses = ["present", "absent", "late"] as const;
 
-  if (!activeSession) {
-    throw new Error("No active academic session");
+  if (!allowedStatuses.includes(status)) {
+    throw new Error("Invalid attendance status");
   }
 
-  // 4. Verify lecturer assignment for active session
-  const assignment = await CourseAssignment.findOne({
-    courseId: enrollment.courseId,
-    lecturerId,
-    academicSessionId: activeSession._id,
-  });
+  const mongoSession = await mongoose.startSession();
 
-  if (!assignment) {
-    throw new Error(
-      "Not authorized to mark attendance for this course"
-    );
+  try {
+    let result: any = null;
+
+    await mongoSession.withTransaction(async () => {
+      // Incrementing this field coordinates attendance writes
+      // with the transaction that closes the lecture.
+      const session = await AttendanceSession.findOneAndUpdate(
+        {
+          _id: attendanceSessionId,
+          lecturerId,
+          status: "open",
+        },
+        {
+          $inc: {
+            attendanceVersion: 1,
+          },
+        },
+        {
+          new: true,
+          session: mongoSession,
+        }
+      );
+
+      if (!session) {
+        throw new Error("Open attendance session not found");
+      }
+
+      if (!["manual", "both"].includes(session.attendanceMethod)) {
+        throw new Error("Manual attendance is not enabled");
+      }
+
+      const enrollment = await CourseEnrollment.findOne({
+        _id: enrollmentId,
+        courseId: session.courseId,
+        academicSessionId: session.academicSessionId,
+        status: "active",
+      }).session(mongoSession);
+
+      if (!enrollment) {
+        throw new Error("Active course enrollment not found");
+      }
+
+      const recordedAt = new Date();
+
+      result = await Attendance.findOneAndUpdate(
+        {
+          attendanceSessionId,
+          studentId: enrollment.studentId,
+        },
+        {
+          $set: {
+            attendanceSessionId,
+            enrollmentId,
+            studentId: enrollment.studentId,
+            dateTime: recordedAt,
+            status,
+            method: "manual",
+            recordedBy: lecturerId,
+            recordedAt,
+            manualReason: reason?.trim() || null,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true,
+          session: mongoSession,
+        }
+      );
+    });
+
+    return result;
+  } finally {
+    await mongoSession.endSession();
   }
-
-  // 5. Validate date
-  const attendanceDate = new Date(dateTime);
-  if (isNaN(attendanceDate.getTime())) {
-    throw new Error("Invalid attendance date");
-  }
-
-  // 6. Upsert: if attendance was already recorded for this
-  // enrollment/date, correct its status instead of rejecting the
-  // request — this lets a lecturer fix a mis-tap on the same day.
-  const attendance = await Attendance.findOneAndUpdate(
-    {
-      enrollmentId,
-      dateTime: attendanceDate,
-    },
-    {
-      enrollmentId,
-      dateTime: attendanceDate,
-      status,
-    },
-    {
-      upsert: true,
-      new: true,
-    }
-  );
-
-  return attendance;
 };
 
 export const getLecturerAttendanceReport = async (userId: string) => {
-  const { Lecturer } = await import("../models/Lecturer.js");
   const lecturer = await Lecturer.findOne({ userId });
 
   if (!lecturer) {
     throw new Error("Lecturer not found");
   }
 
-  // 1. Get lecturer courses via CourseAssignment
+  const academicSession = await AcademicSession.findOne({
+    isActive: true,
+  });
+
+  if (!academicSession) {
+    throw new Error("No active academic session found");
+  }
+
   const assignments = await CourseAssignment.find({
     lecturerId: lecturer._id,
+    academicSessionId: academicSession._id,
   }).populate("courseId");
 
-  const courses = assignments
-    .map((a: any) => a.courseId)
-    .filter(Boolean);
+  // Get unique courses assigned to this lecturer.
+  const courses = new Map<string, any>();
 
-  const courseIds = courses.map((c: any) => c._id);
+  for (const assignment of assignments) {
+    const course = assignment.courseId as any;
 
-  // 2. Get enrollments for these courses
-  const enrollments = await CourseEnrollment.find({
-    courseId: { $in: courseIds },
-  });
+    if (course?._id) {
+      courses.set(course._id.toString(), course);
+    }
+  }
 
-  const enrollmentIds = enrollments.map((e) => e._id);
+  const reports = await Promise.all(
+    Array.from(courses.values()).map(async (course) => {
+      // Only currently active students count toward expected attendance.
+      const enrollments = await CourseEnrollment.find({
+        courseId: course._id,
+        academicSessionId: academicSession._id,
+        status: "active",
+      }).select("_id");
 
-  // 3. Get attendance records
-  const attendance = await Attendance.find({
-    enrollmentId: { $in: enrollmentIds },
-  });
+      // Only closed sessions count as completed attendance opportunities.
+      const closedSessions = await AttendanceSession.find({
+        courseId: course._id,
+        lecturerId: lecturer._id,
+        academicSessionId: academicSession._id,
+        status: "closed",
+      }).select("_id");
 
-  // 4. Build report per course
-  const report = courses.map((course) => {
-    const courseEnrollments = enrollments.filter(
-      (e) => e.courseId.toString() === course._id.toString()
-    );
+      const enrollmentIds = enrollments.map((enrollment) => enrollment._id);
+      const attendanceSessionIds = closedSessions.map(
+        (session) => session._id
+      );
 
-    const courseEnrollmentIds = courseEnrollments.map((e) =>
-      e._id.toString()
-    );
+      let attendanceRecords: any[] = [];
 
-    const courseAttendance = attendance.filter((a) =>
-      courseEnrollmentIds.includes(a.enrollmentId.toString())
-    );
+      if (enrollmentIds.length > 0 && attendanceSessionIds.length > 0) {
+        attendanceRecords = await Attendance.find({
+          enrollmentId: { $in: enrollmentIds },
+          attendanceSessionId: { $in: attendanceSessionIds },
+        }).select("status");
+      }
 
-    const presentCount = courseAttendance.filter(
-      (a) => a.status === "present"
-    ).length;
+      const presentCount = attendanceRecords.filter(
+        (record) => record.status === "present"
+      ).length;
 
-    const total = courseAttendance.length;
+      const lateCount = attendanceRecords.filter(
+        (record) => record.status === "late"
+      ).length;
 
-    const attendanceRate =
-      total === 0 ? 0 : (presentCount / total) * 100;
+      const absentCount = attendanceRecords.filter(
+        (record) => record.status === "absent"
+      ).length;
 
-    return {
-      courseId: course._id,
-      courseTitle: course.courseTitle,
-      courseCode: course.courseCode,
-      totalStudents: courseEnrollments.length,
-      totalAttendanceRecords: total,
-      attendanceRate: Number(attendanceRate.toFixed(2)),
-    };
-  });
+      const totalStudents = enrollments.length;
+      const totalClosedSessions = closedSessions.length;
 
-  return report;
+      const totalExpectedAttendance =
+        totalStudents * totalClosedSessions;
+
+      // Present and late students both count as having attended.
+      const attendedCount = presentCount + lateCount;
+
+      const attendanceRate =
+        totalExpectedAttendance > 0
+          ? Number(
+              (
+                (attendedCount / totalExpectedAttendance) *
+                100
+              ).toFixed(2)
+            )
+          : 0;
+
+      return {
+        courseId: course._id,
+        courseTitle: course.courseTitle,
+        courseCode: course.courseCode,
+        academicSessionId: academicSession._id,
+        academicSessionName: academicSession.sessionName,
+
+        totalStudents,
+        totalClosedSessions,
+        totalExpectedAttendance,
+        totalAttendanceRecords: attendanceRecords.length,
+
+        presentCount,
+        lateCount,
+        absentCount,
+        attendanceRate,
+      };
+    })
+  );
+
+  return reports;
 };

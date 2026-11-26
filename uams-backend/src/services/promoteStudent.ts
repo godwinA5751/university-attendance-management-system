@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Student } from "../models/Student.js";
+import { AcademicSession } from "../models/AcademicSession.js";
 
 import {
   enrollStudentIntoLevelCourses,
@@ -41,10 +42,19 @@ export const promoteStudent = async (
 
       await student.save({ session: mongoSession });
 
+      const academicSession = await AcademicSession.findOne({
+        isActive: true,
+      }).session(mongoSession);
+
+      if (!academicSession) {
+        throw new Error("No active academic session found");
+      }
+
       await enrollStudentIntoLevelCourses({
         studentId: student._id.toString(),
         level: newLevel,
         curriculumId: student.curriculumId.toString(),
+        academicSessionId: academicSession._id.toString(),
         carryOverCourseIds,
         maxCarryOverLevel: previousLevel,
         session: mongoSession,

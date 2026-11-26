@@ -12,6 +12,8 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import courseAssignmentRoutes from "./routes/courseAssignmentRoutes.js";
 import curriculumRoutes from "./routes/curriculumRoutes.js";
+import lectureVenueRoutes from "./routes/lectureVenueRoutes.js";
+import attendanceSessionRoutes from "./routes/attendanceSessionRoutes.js";
 
 const app = express();
 
@@ -50,6 +52,8 @@ app.use("/lecturers", lecturerRoutes);
 app.use("/courses", courseRoutes);
 app.use("/academic-sessions", academicSessionRoutes);
 app.use("/enrollments", enrollmentRoutes);
+app.use("/lecture-venues", lectureVenueRoutes);
+app.use("/attendance-sessions", attendanceSessionRoutes);
 app.use("/attendance", attendanceRoutes);
 app.use("/course-assignments", courseAssignmentRoutes);
 app.use("/analytics", analyticsRoutes);

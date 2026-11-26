@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import { Student } from "../models/Student.js";
 import { Course } from "../models/Course.js";
@@ -8,48 +9,72 @@ type EnrollStudentIntoLevelCoursesInput = {
   studentId: string;
   level: number;
   curriculumId: string;
+  academicSessionId: string;
   carryOverCourseIds?: string[];
   maxCarryOverLevel?: number;
   requirePreviousEnrollment?: boolean;
+  session?: mongoose.ClientSession;
 };
 
 type EnrollExistingStudentsIntoCourseInput = {
   courseId: string;
   level: number;
   curriculumId: string;
+  academicSessionId: string;
   session?: mongoose.ClientSession;
 };
-
 
 type AdminEnrollmentCorrectionInput = {
   studentId: string;
   level: number;
   curriculumId: string;
+  academicSessionId: string;
   carryOverCourseIds?: string[];
   levelChanged: boolean;
   session: mongoose.ClientSession;
 };
 
+const validateObjectIds = (ids: string[]) => {
+  if (ids.some((id) => !mongoose.isValidObjectId(id))) {
+    throw new Error("One or more course IDs are invalid.");
+  }
+};
+
+const isDuplicateEnrollment = (error: unknown) =>
+  error instanceof Error &&
+  error.message ===
+    "Student already enrolled in this course for this session";
+
 export const syncStudentEnrollmentsAfterAdminUpdate = async ({
   studentId,
   level,
   curriculumId,
+  academicSessionId,
   carryOverCourseIds = [],
   levelChanged,
   session,
 }: AdminEnrollmentCorrectionInput) => {
   const uniqueCarryOverIds = [...new Set(carryOverCourseIds)];
 
-  // Validate carryover IDs.
+  validateObjectIds(uniqueCarryOverIds);
+
   if (
-    uniqueCarryOverIds.some(
-      (id) => !mongoose.Types.ObjectId.isValid(id)
-    )
+    !mongoose.isValidObjectId(studentId) ||
+    !mongoose.isValidObjectId(curriculumId) ||
+    !mongoose.isValidObjectId(academicSessionId)
   ) {
-    throw new Error("One or more carryover course IDs are invalid.");
+    throw new Error("Invalid student, curriculum, or academic session ID.");
   }
 
-  // Find courses for the student's corrected/current level.
+  const student = await Student.findOne({
+    _id: studentId,
+    curriculumId,
+  }).session(session);
+
+  if (!student) {
+    throw new Error("Student not found in the specified curriculum.");
+  }
+
   const levelCourses = levelChanged
     ? await Course.find({
         level,
@@ -57,7 +82,6 @@ export const syncStudentEnrollmentsAfterAdminUpdate = async ({
       }).session(session)
     : [];
 
-  // Carryovers must be below the student's current level.
   const carryOverCourses = uniqueCarryOverIds.length
     ? await Course.find({
         _id: { $in: uniqueCarryOverIds },
@@ -77,14 +101,15 @@ export const syncStudentEnrollmentsAfterAdminUpdate = async ({
     ...carryOverCourses.map((course) => course._id.toString()),
   ];
 
-  // During a level correction, drop active enrollments
-  // that are not part of the corrected enrollment set.
+  const uniqueCourseIds = [...new Set(coursesToKeep)];
+
   if (levelChanged) {
     await CourseEnrollment.updateMany(
       {
         studentId,
+        academicSessionId,
         status: "active",
-        courseId: { $nin: coursesToKeep },
+        courseId: { $nin: uniqueCourseIds },
       },
       {
         $set: { status: "dropped" },
@@ -93,25 +118,22 @@ export const syncStudentEnrollmentsAfterAdminUpdate = async ({
     );
   }
 
-  // Add or reactivate eligible enrollments.
-  for (const courseId of coursesToKeep) {
+  for (const courseId of uniqueCourseIds) {
     const existingEnrollment = await CourseEnrollment.findOne({
       studentId,
       courseId,
+      academicSessionId,
     }).session(session);
 
     if (!existingEnrollment) {
-      const enrollment = new CourseEnrollment({
-        studentId,
-        courseId,
-        status: "active",
-      });
-
-      await enrollment.save({ session });
+      await createCourseEnrollment(
+        { studentId, courseId, academicSessionId },
+        session
+      );
       continue;
     }
 
-    // Never overwrite completed enrollment history.
+    // Do not reactivate or overwrite completed enrollment history.
     if (existingEnrollment.status === "dropped") {
       existingEnrollment.status = "active";
       await existingEnrollment.save({ session });
@@ -123,13 +145,29 @@ export const enrollStudentIntoLevelCourses = async ({
   studentId,
   level,
   curriculumId,
+  academicSessionId,
   carryOverCourseIds = [],
   maxCarryOverLevel = level,
   requirePreviousEnrollment = true,
   session,
-}: EnrollStudentIntoLevelCoursesInput & {
-  session?: mongoose.ClientSession;
-}) => {
+}: EnrollStudentIntoLevelCoursesInput) => {
+  if (
+    !mongoose.isValidObjectId(studentId) ||
+    !mongoose.isValidObjectId(curriculumId) ||
+    !mongoose.isValidObjectId(academicSessionId)
+  ) {
+    throw new Error("Invalid student, curriculum, or academic session ID.");
+  }
+
+  const student = await Student.findOne({
+    _id: studentId,
+    curriculumId,
+  }).session(session ?? null);
+
+  if (!student) {
+    throw new Error("Student not found in the specified curriculum.");
+  }
+
   const levelCourses = await Course.find({
     level,
     curriculumId,
@@ -137,13 +175,7 @@ export const enrollStudentIntoLevelCourses = async ({
 
   const uniqueCarryOverIds = [...new Set(carryOverCourseIds)];
 
-  if (
-    uniqueCarryOverIds.some(
-      (id) => !mongoose.Types.ObjectId.isValid(id)
-    )
-  ) {
-    throw new Error("One or more carryover course IDs are invalid.");
-  }
+  validateObjectIds(uniqueCarryOverIds);
 
   const validCarryOverCourses = uniqueCarryOverIds.length
     ? await Course.find({
@@ -163,9 +195,18 @@ export const enrollStudentIntoLevelCourses = async ({
     const previousEnrollments = await CourseEnrollment.find({
       studentId,
       courseId: { $in: uniqueCarryOverIds },
+      academicSessionId: { $ne: academicSessionId },
     }).session(session ?? null);
 
-    if (previousEnrollments.length !== uniqueCarryOverIds.length) {
+    const previouslyEnrolledCourseIds = new Set(
+      previousEnrollments.map((enrollment) => enrollment.courseId.toString())
+    );
+
+    if (
+      uniqueCarryOverIds.some(
+        (courseId) => !previouslyEnrolledCourseIds.has(courseId)
+      )
+    ) {
       throw new Error(
         "Students can only carry over courses they were previously enrolled in."
       );
@@ -181,13 +222,12 @@ export const enrollStudentIntoLevelCourses = async ({
 
   for (const courseId of uniqueCourseIds) {
     try {
-      await createCourseEnrollment({ studentId, courseId }, session);
+      await createCourseEnrollment(
+        { studentId, courseId, academicSessionId },
+        session
+      );
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message ===
-          "Student already enrolled in this course for this curriculum"
-      ) {
+      if (isDuplicateEnrollment(error)) {
         continue;
       }
 
@@ -200,12 +240,24 @@ export const enrollExistingStudentsIntoCourse = async ({
   courseId,
   level,
   curriculumId,
+  academicSessionId,
   session,
 }: EnrollExistingStudentsIntoCourseInput) => {
-  const course = await Course.findById(courseId).session(session ?? null);
+  if (
+    !mongoose.isValidObjectId(courseId) ||
+    !mongoose.isValidObjectId(academicSessionId)
+  ) {
+    throw new Error("Invalid course or academic session ID.");
+  }
+
+  const course = await Course.findOne({
+    _id: courseId,
+    level,
+    curriculumId,
+  }).session(session ?? null);
 
   if (!course) {
-    throw new Error("Course not found");
+    throw new Error("Course not found in the specified curriculum and level.");
   }
 
   const students = await Student.find({
@@ -219,15 +271,12 @@ export const enrollExistingStudentsIntoCourse = async ({
         {
           studentId: student._id.toString(),
           courseId,
+          academicSessionId,
         },
         session
       );
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message ===
-          "Student already enrolled in this course for this curriculum"
-      ) {
+      if (isDuplicateEnrollment(error)) {
         continue;
       }
 

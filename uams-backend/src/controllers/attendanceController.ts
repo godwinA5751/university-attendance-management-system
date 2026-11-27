@@ -56,6 +56,16 @@ export const submitQrAttendanceController = async (
       });
     }
 
+    if (
+      !req.body ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body)
+    ) {
+      return res.status(400).json({
+        message: "Invalid attendance request",
+      });
+    }
+
     const attendance = await submitQrAttendance(
       req.body,
       req.user.id
@@ -70,9 +80,12 @@ export const submitQrAttendanceController = async (
       error instanceof Error ? error.message : "Internal server error";
 
     const status =
-      message.includes("Invalid") ||
-      message.includes("required") ? 400
+      message.includes("GPS accuracy is insufficient") ? 422
+      : message.includes("outside the attendance area") ||
+        message.includes("outside the permitted attendance area") ? 403
       : message.includes("expired") ? 410
+      : message.includes("Invalid") ||
+        message.includes("required") ? 400
       : message.includes("not found") ? 404
       : message.includes("not enabled") ||
         message.includes("not allowed") ? 403
@@ -80,6 +93,14 @@ export const submitQrAttendanceController = async (
         message.includes("duplicate") ||
         message.includes("E11000") ? 409
       : 500;
+
+    if (status === 500) {
+      console.error("QR attendance submission error:", error);
+
+      return res.status(500).json({
+        message: "Unable to record attendance at this time",
+      });
+    }
 
     return res.status(status).json({ message });
   }

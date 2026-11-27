@@ -9,6 +9,7 @@ import { getCourseAttendanceController } from "../controllers/courseController.j
 import { getEnrollmentAttendanceController } from "../controllers/courseEnrollmentController.js";
 import { verifyJWT } from "../middleware/verifyJWT.js";
 import { authorize } from "../middleware/authorize.js";
+import { qrAttendanceRateLimiter } from "../middleware/qrAttendanceRateLimiter.js";
 
 const router = express.Router();
 
@@ -47,6 +48,7 @@ router.post(
   "/qr",
   verifyJWT,
   authorize(["student"]),
+  qrAttendanceRateLimiter,
   submitQrAttendanceController
 );
 

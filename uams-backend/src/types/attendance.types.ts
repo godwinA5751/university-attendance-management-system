@@ -33,6 +33,10 @@ export interface RecordManualAttendanceInput {
 
 export interface SubmitQrAttendanceInput {
   token: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  locationTimestamp: number;
 }
 
 export interface UpdateAttendanceSessionInput {

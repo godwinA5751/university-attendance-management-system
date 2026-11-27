@@ -6,18 +6,37 @@ const venueSnapshotSchema = new mongoose.Schema(
     venueName: {
       type: String,
       required: true,
+      trim: true,
     },
     latitude: {
       type: Number,
       required: true,
+      min: -90,
+      max: 90,
+      validate: {
+        validator: (value: number) => Number.isFinite(value),
+        message: "Snapshot latitude must be a valid finite number.",
+      },
     },
     longitude: {
       type: Number,
       required: true,
+      min: -180,
+      max: 180,
+      validate: {
+        validator: (value: number) => Number.isFinite(value),
+        message: "Snapshot longitude must be a valid finite number.",
+      },
     },
     allowedRadius: {
       type: Number,
       required: true,
+      min: 1,
+      validate: {
+        validator: (value: number) =>
+          Number.isFinite(value) && value > 0,
+        message: "Snapshot radius must be a positive finite number.",
+      },
     },
   },
   { _id: false }

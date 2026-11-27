@@ -18,17 +18,30 @@ const lectureVenueSchema = new mongoose.Schema(
       required: true,
       min: -90,
       max: 90,
+      validate: {
+        validator: (value: number) => Number.isFinite(value),
+        message: "Latitude must be a valid finite number.",
+      },
     },
     longitude: {
       type: Number,
       required: true,
       min: -180,
       max: 180,
+      validate: {
+        validator: (value: number) => Number.isFinite(value),
+        message: "Longitude must be a valid finite number.",
+      },
     },
     allowedRadius: {
       type: Number,
       required: true,
       min: 1,
+      validate: {
+        validator: (value: number) =>
+          Number.isFinite(value) && value > 0,
+        message: "Allowed radius must be a positive finite number.",
+      },
     },
     isActive: {
       type: Boolean,

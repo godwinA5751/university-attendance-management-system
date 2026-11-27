@@ -8,6 +8,10 @@ import { Attendance } from "../models/Attendance.js";
 import { CourseAssignment } from "../models/CourseAssignment.js";
 import { Student } from "../models/Student.js";
 import { verifyQrAttendanceToken } from "../utils/qrAttendanceToken.js";
+import {
+  validateGeoLocation,
+  calculateDistanceMeters,
+} from "../utils/geolocation.js";
 import type { SubmitQrAttendanceInput } from "../types/attendance.types.js";
 
 export const getAttendanceByStudent = async (studentId: string) => {
@@ -264,6 +268,25 @@ export const submitQrAttendance = async (
     throw new Error("QR attendance token is required");
   }
 
+  validateGeoLocation({
+    latitude: input.latitude,
+    longitude: input.longitude,
+    accuracy: input.accuracy,
+  });
+
+  const now = Date.now();
+  const locationAge = now - input.locationTimestamp;
+
+  if (
+    !Number.isFinite(input.locationTimestamp) ||
+    locationAge > 2 * 60 * 1000 ||
+    locationAge < -30 * 1000
+  ) {
+    throw new Error(
+      "GPS location is stale or has an invalid timestamp. Please retry."
+    );
+  }
+
   const { sessionId } = verifyQrAttendanceToken(input.token);
 
   const student = await Student.findOne({ userId }).select("_id");
@@ -296,6 +319,40 @@ export const submitQrAttendance = async (
       if (!attendanceSession) {
         throw new Error(
           "Attendance session is closed or QR attendance is not enabled"
+        );
+      }
+
+      if (!attendanceSession.venueSnapshot) {
+        throw new Error("Attendance session venue not found");
+      }
+
+      const venue = attendanceSession.venueSnapshot;
+
+      if (
+        !Number.isFinite(venue.latitude) ||
+        !Number.isFinite(venue.longitude) ||
+        !Number.isFinite(venue.allowedRadius) ||
+        venue.latitude < -90 ||
+        venue.latitude > 90 ||
+        venue.longitude < -180 ||
+        venue.longitude > 180 ||
+        venue.allowedRadius <= 0
+      ) {
+        throw new Error("Attendance session has invalid venue coordinates");
+      }
+
+      const distance = calculateDistanceMeters(
+        input.latitude,
+        input.longitude,
+        venue.latitude,
+        venue.longitude
+      );
+
+      const maximumPossibleDistance = distance + input.accuracy;
+
+      if (maximumPossibleDistance > venue.allowedRadius) {
+        throw new Error(
+          "Your location is outside the permitted attendance area or GPS accuracy is insufficient."
         );
       }
 
